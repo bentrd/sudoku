@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Easy",
+        "maxScore": 150
+    },
+    {
+        "name": "Medium",
+        "maxScore": 300
+    },
+    {
+        "name": "Hard",
+        "maxScore": 600
+    },
+    {
+        "name": "Very Hard",
+        "maxScore": 1000
+    },
+    {
+        "name": "Extreme",
+        "maxScore": 99999999
+    }
+]

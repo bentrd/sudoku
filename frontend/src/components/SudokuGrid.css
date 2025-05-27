@@ -1,0 +1,141 @@
+/* components/SudokuGrid.css */
+.cell-wrapper {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    overflow: hidden;
+}
+
+.cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border: none;
+    background-color: transparent;
+    font-size: 20px;
+    text-align: center;
+    outline: none;
+    overflow: hidden;
+}
+
+.cell:focus {
+    outline: 2px solid #007bff;
+}
+
+.cell:not(.original):not(.candidate-cell):hover {
+    background-color: #bfddff;
+}
+
+.removed-candidate {
+    background-color: #fb5b5b;
+    font-weight: bold;
+    color: white !important;
+}
+
+table {
+    width: 540px;
+    height: 540px;
+    aspect-ratio: 1/1;
+    border-collapse: collapse;
+    font-family: Calibri, sans-serif;
+    border-radius: 5px;
+}
+
+colgroup,
+tbody {
+    border: solid #333 medium;
+}
+
+td {
+    border: solid #333 thin;
+    height: 1.4em;
+    width: 1.4em;
+    text-align: center;
+    padding: 0;
+}
+
+.original {
+    background-color: #eee;
+    font-weight: bold;
+}
+
+& .highlighted {
+    background-color: #c6fb8e!important;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type=number] {
+    appearance: textfield;
+}
+
+
+.cell-wrapper:not(.original) input:hover {
+    background-color: #bfddff;
+}
+
+.candidate-cell {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    height: 100%;
+    width: 100%;
+    padding: 0;
+    box-sizing: border-box;
+    background-color: transparent;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.candidates-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 90%;
+    height: 90%;
+    text-align: center;
+    font-size: 10px;
+}
+
+.candidate-digit {
+    font-size: 10px;
+    color: #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.candidate-digit:hover {
+    background-color: #bfddff;
+    color: #000;
+}
+
+.candidate-digit.hidden {
+    color: transparent;
+}
+
+.technique-tooltip {
+    position: absolute;
+    top: -20px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    background-color: #fdfdfd;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 10;
+}

@@ -1,0 +1,19 @@
+{
+  "name": "sudoku-battle",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && nodemon server.js",
+    "client": "cd frontend && npm run dev"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "concurrently": "^9.1.2",
+    "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.0"
+  }
+}

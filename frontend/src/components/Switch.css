@@ -1,0 +1,39 @@
+.switch {
+  display: inline-flex;
+  border: 1px solid #333;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #fff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.switch button {
+  flex: 1;
+  padding: 0.8rem 2rem;
+  border: none;
+  background: transparent;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.switch button:not(:last-child) {
+  border-right: 1px solid #fff;
+}
+
+.switch button:hover {
+  background-color: #eee;
+}
+
+.switch button.active {
+  background-color: #333;
+  color: #fff;
+}
