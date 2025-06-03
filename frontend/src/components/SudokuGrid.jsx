@@ -11,7 +11,8 @@ import { useState, useRef, useEffect } from 'react';
 const SudokuGrid = ({
     initialPuzzle,
     originalPuzzle,
-    disabled
+    disabled,
+    onBoardChange,
 }) => {
     // Each cell: { digit: number | null, candidates: number[], centerCands: number[], color: string | null }
     const emptyCell = { digit: null, candidates: [], centerCands: [], color: null };
@@ -46,6 +47,13 @@ const SudokuGrid = ({
         '#7f7f7f', // gray
         '#bcbd22'  // olive
     ];
+
+    // Notify parent of any board changes
+    useEffect(() => {
+        if (typeof onBoardChange === 'function') {
+            onBoardChange(board);
+        }
+    }, [board, onBoardChange]);
 
     // ────────────────────────────────────────────────
     // Undo/Redo stacks
@@ -512,7 +520,7 @@ const SudokuGrid = ({
                     return (
                         <div
                             key={index}
-                            className={`relative w-14 h-14 ${bgClass} ${borderClasses}`}
+                            className={`relative w-20 h-20 ${bgClass} ${borderClasses}`}
                             onMouseDown={(e) => handleMouseDown(index, e)}
                             onMouseEnter={() => handleMouseEnter(index)}
                             onContextMenu={(e) => e.preventDefault()}
@@ -535,7 +543,7 @@ const SudokuGrid = ({
                             {/* 3) Digit layer */}
                             {displayDigit && (
                                 <div
-                                    className={`absolute inset-0 flex items-center justify-center text-xl font-bold ${hasConflict(index, displayDigit)
+                                    className={`absolute inset-0 flex items-center justify-center text-3xl font-bold ${hasConflict(index, displayDigit)
                                         ? 'text-red-600'
                                         : isGiven
                                             ? 'text-gray-900'
@@ -568,14 +576,14 @@ const SudokuGrid = ({
 
                             {/* 5) Center candidates (if any) */}
                             {!displayDigit && cell.centerCands.length > 0 && (
-                                <div className="absolute inset-0 flex items-center justify-center text-xs text-black z-5 font-bold opacity-60">
+                                <div className="absolute inset-0 flex flex-wrap items-center justify-center text-m text-black z-5 font-bold opacity-60 p-1">
                                     {sortedCenterCands.map((num, i) => {
                                         const conflict = hasConflict(index, num);
                                         return (
                                             <span
                                                 key={i}
                                                 className={conflict ? 'text-red-600' : undefined}
-                                                style={{ marginLeft: i > 0 ? 1 : 0, marginRight: 0 }}
+                                                style={{ margin: '0 2px' }}
                                             >
                                                 {num}
                                             </span>

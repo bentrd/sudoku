@@ -59,7 +59,7 @@ const AnalyticsPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen min-w-screen bg-gray-50 py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-800 mb-6">
           Sudoku Generation Analytics
