@@ -1,9 +1,31 @@
-import { Techniques } from './../components/solver/Techniques';
 // pages/SolverPage.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import SudokuGrid from '../components/SudokuGrid';
+import SolverGrid from '../components/SolverGrid';
+
+const Techniques = ({
+  difficulty,
+  listRef,
+  techniques,
+  setStepIndex,
+  stepIndex
+}) => {
+  return <div className="w-64 ml-4 flex flex-col flex-shrink-0 h-[500px]">
+    {difficulty && <>
+      <div className="p-2">
+        <p>Difficulty Score: {difficulty.score}</p>
+        <p>Category: {difficulty.name}</p>
+        <h3>Techniques Used:</h3>
+      </div>
+      <ul ref={listRef} className="overflow-y-scroll m-0 px-2 border border-gray-300">
+        {techniques.map((t, i) => <li key={i} onClick={() => setStepIndex(i)} className={`mb-1 cursor-pointer ${i === stepIndex ? 'font-bold underline' : 'font-normal no-underline'}`}>
+          {t.name}
+        </li>)}
+      </ul>
+    </>}
+  </div>;
+}
 
 const SolverPage = () => {
   const location = useLocation();
@@ -84,16 +106,16 @@ const SolverPage = () => {
   }, [stepIndex]);
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="p-8 min-w-screen flex flex-col items-center content-center">
       <h2>Sudoku Solver</h2>
-      <div style={{ marginBottom: '1rem', display: 'flex', flexDirection: 'column' }}>
+      <div className="mb-4 flex flex-col">
         <div>Paste puzzle string (81 chars, use . for blanks): </div>
-        <div style={{ display: 'flex', flexDirection: 'row' }}>
+        <div className="flex flex-row">
           <input
             type="text"
             value={rawInput}
             onChange={e => setRawInput(e.target.value)}
-            style={{ width: '500px' }}
+            className="w-[500px]"
           />
           <button
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
@@ -117,10 +139,10 @@ const SolverPage = () => {
         </div>
       </div>
 
-      <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'stretch' }}>
+      <div className="mt-4 flex">
         {/* Left: the grid */}
-        <div style={{ flex: 1 }}>
-          <SudokuGrid
+        <div className="flex-1">
+          <SolverGrid
             puzzle={puzzle}
             originalPuzzle={origPuzzle}
             onChange={(i, val) => {
@@ -131,7 +153,7 @@ const SolverPage = () => {
             highlightedTechCells={involvedCells}
           />
 
-          <div style={{ marginTop: '1rem' }}>
+          <div className="mt-4">
             <button
               className="px-6 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
               onClick={async () => {
@@ -149,17 +171,17 @@ const SolverPage = () => {
           </div>
 
           {techniques.length > 0 && (
-            <div style={{ marginTop: '1rem' }}>
-              <button 
+            <div className="mt-4">
+              <button
                 className="px-4 py-2 bg-gray-500 text-white rounded mr-2 hover:bg-gray-600 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                onClick={() => setStepIndex(i => Math.max(i - 1, 0))} 
+                onClick={() => setStepIndex(i => Math.max(i - 1, 0))}
                 disabled={stepIndex <= 0}
               >
                 Previous
               </button>
-              <button 
+              <button
                 className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                onClick={() => setStepIndex(i => Math.min(i + 1, techniques.length - 1))} 
+                onClick={() => setStepIndex(i => Math.min(i + 1, techniques.length - 1))}
                 disabled={stepIndex >= techniques.length - 1}
               >
                 Next
@@ -169,7 +191,7 @@ const SolverPage = () => {
         </div>
 
         {/* Right: the techniques panel */}
-        <Techniques   difficulty={difficulty} listRef={listRef} techniques={techniques} setStepIndex={setStepIndex} stepIndex={stepIndex}  />
+        <Techniques difficulty={difficulty} listRef={listRef} techniques={techniques} setStepIndex={setStepIndex} stepIndex={stepIndex} />
       </div>
     </div>
   );

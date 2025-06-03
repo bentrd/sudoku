@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useState } from 'react';
+import useAuth from './useAuth';
 import AuthButton from './AuthButton';
 
 const SignupForm = ({ onSwitchToLogin }) => {
@@ -8,7 +7,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const navigate = useNavigate();
+  const { signup } = useAuth();
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -17,20 +16,12 @@ const SignupForm = ({ onSwitchToLogin }) => {
       alert('Passwords do not match');
       return;
     }
-    try {
-      const response = await axios.post('http://localhost:3001/api/sudoku/signup', {
-        username,
-        email,
-        password,
-      });
-      // On success, redirect to login
+    const success = await signup({ username, email, password });
+    if (success) {
       alert('Account created! Please log in.');
-      // Switch to login form instead of navigating away
       onSwitchToLogin();
-    } catch (err) {
-      console.error('Signup error:', err);
-      const msg = err.response?.data?.message || 'Signup failed';
-      alert(msg);
+    } else {
+      alert('Signup failed');
     }
   };
 

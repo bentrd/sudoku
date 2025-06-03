@@ -1,11 +1,34 @@
-import AuthProvider from "./components/authentication/AuthProvider";
-import Routes from "./Routes";
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import NavBar from './components/NavBar';
+import HomePage from './pages/HomePage';
+import SolverPage from './pages/SolverPage';
+import AuthenticationPage from './pages/AuthenticationPage';
+import ProtectedRoute from './components/authentication/ProtectedRoute';
+import AnalyticsPage from './pages/AnalyticsPage';
 
 function App() {
   return (
-    <AuthProvider>
-      <Routes />
-    </AuthProvider>
+    <BrowserRouter>
+      {/* Always‐visible navbar */}
+      <NavBar />
+
+      {/* Your route tree */}
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/auth" element={<AuthenticationPage />} />
+
+        {/* All routes below require a valid auth token */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/solver" element={<SolverPage />} />
+          <Route path="/db" element={<AnalyticsPage />} />
+        </Route>
+
+        {/* Fallback for any unmatched URL */}
+        <Route path="*" element={<div>Page Not Found</div>} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

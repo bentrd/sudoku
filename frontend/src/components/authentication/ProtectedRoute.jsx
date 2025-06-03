@@ -1,12 +1,24 @@
-import { Navigate, Outlet, useLocation } from "react-router-dom";
+// frontend/src/components/authentication/ProtectedRoute.jsx
+import React from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import useAuth from './useAuth';
 
-export const ProtectedRoute = () => {
+const ProtectedRoute = () => {
+  const { accessToken, loading } = useAuth();
   const location = useLocation();
-  // Check if the user is authenticated by looking for a token
-  const token = localStorage.getItem('accessToken');
-  if (!token) {
-    // If not authenticated, redirect to the login page
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+
+  // If we’re still loading (e.g. refreshing), show nothing (or a spinner)
+  if (loading) {
+    return null;
   }
+
+  // If no token, redirect to login
+  if (!accessToken) {
+    return <Navigate to="/auth" replace state={{ from: location }} />;
+  }
+
+  // Otherwise render children
   return <Outlet />;
-};
+}
+
+export default ProtectedRoute;

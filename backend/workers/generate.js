@@ -28,11 +28,6 @@ const { raw } = require('@prisma/client/runtime/library');
   // prepare flat with [] for empties
   const flatOriginal = puzzleGrid.flat().map(n => n === 0 ? [] : n);
 
-  // initial candidates merged
-  const candidateSolver = new SudokuSolver(flatOriginal);
-  candidateSolver.initializeCandidates();
-  const mergedPuzzle = candidateSolver.puzzle.slice();
-
   // rate the puzzle
   const ratingSolver = new SudokuSolver(flatOriginal);
   const { solution: solvedFlat, techniques, difficulty: puzzleDifficulty } = ratingSolver.solve();
@@ -56,7 +51,7 @@ const { raw } = require('@prisma/client/runtime/library');
   parentPort.postMessage({
     type: 'result', msg: {
       id,
-      puzzle: mergedPuzzle,
+      puzzle: puzzleGrid.flat(),
       solution: solvedFlat,
       rating,
       category,

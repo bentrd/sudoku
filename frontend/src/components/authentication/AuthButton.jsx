@@ -1,5 +1,3 @@
-import React from 'react';
-
 const AuthButton = ({
   text,
   color = 'bg-gray-800 hover:bg-gray-900',
