@@ -4,10 +4,19 @@ const router = express.Router();
 const SudokuSolver = require('../utils/SudokuSolver');
 const { PrismaClient } = require('@prisma/client');
 const { Worker } = require('worker_threads');
+const cookieParser = require('cookie-parser');
+// Token helpers (adjust path if necessary)
+const {
+    generateAccessToken,
+    generateRefreshToken,
+    verifyToken,
+} = require('../utils/helpers');
 
 const prisma = new PrismaClient();
+// parse cookies for refreshToken lookup
+router.use(cookieParser());
 
-router.get('/', (req, res) => {
+router.get('/generate', (req, res) => {
     const { difficulty = 'Easy', puzzle = '' } = req.query;
     // offload generation & solve to worker
     const worker = new Worker(
@@ -16,10 +25,7 @@ router.get('/', (req, res) => {
     );
 
     worker.on('message', data => {
-        if (data.type === 'debug') {
-            console.log('[worker]', data.msg);
-        } else if (data.type === 'result') {
-            console.log('Puzzle generated:', data);
+        if (data.type === 'result') {
             res.json({
                 id: data.msg.id,
                 puzzle: data.msg.puzzle,
@@ -107,7 +113,7 @@ router.delete('/games/:id', async (req, res) => {
 router.post('/place', async (req, res) => {
     // receive a puzzle, a cell index and a value, and return the puzzle with the value placed and the candidates updated
     const { puzzle, cellIndex, value } = req.body;
-    console.log('Received puzzle:', req.body);
+    //console.log('Received puzzle:', req.body);
     if (!Array.isArray(puzzle) || puzzle.length !== 81 || typeof cellIndex !== 'number' || typeof value !== 'string') {
         return res.status(400).json({ error: 'Invalid input format' });
     }
@@ -121,18 +127,113 @@ router.post('/place', async (req, res) => {
     });
 });
 
+// --- Authentication routes ---
+
+// Get current user / verify access token
 router.get('/me', async (req, res) => {
-    // This endpoint is for testing purposes, to see if the user is logged in
-    if (!req.user) {
-        return res.status(401).json({ error: 'Unauthorized' });
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ message: 'Unauthorized' });
     }
-    res.json({
-        user: {
-            id: req.user.id,
-            email: req.user.email,
-            name: req.user.name,
+    const token = authHeader.split(' ')[1];
+    const accessPayload = await verifyToken(token, { returnPayload: true });
+    if (!accessPayload) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    // The access token payload.data holds the refreshToken
+    const refreshToken = accessPayload.data;
+    const refreshPayload = await verifyToken(refreshToken, { returnPayload: true });
+    if (!refreshPayload) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    // Extract user ID from refresh token payload
+    const userId = refreshPayload.data;
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: Number(userId) },
+            select: { id: true, username: true, email: true } // adjust fields as needed
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
-    });
+        // Return access token and user profile
+        res.json({ accessToken: token, user });
+    } catch (err) {
+        console.error('Error fetching user in /me:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Refresh the access token using the HTTP-only cookie
+router.get('/refreshToken', async (req, res) => {
+    const refreshToken = req.cookies.refreshToken;
+    const refreshPayload = refreshToken
+        ? await verifyToken(refreshToken, { returnPayload: true })
+        : null;
+    if (process.env.USE_AUTH && !refreshPayload) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const newAccessToken = await generateAccessToken(refreshToken);
+    res.json({ accessToken: newAccessToken });
+});
+
+// Sign in a user and issue tokens
+router.post('/login', async (req, res) => {
+    console.log('Login attempt:', req.body);
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password are required' });
+    }
+    try {
+        // Lookup user in database
+        const user = await prisma.user.findUnique({ where: { username } });
+        if (!user) user = await prisma.user.findUnique({ where: { email: username } });
+        // In a real app, verify hashed password here
+        if (!user || user.password !== password) return res.status(401).json({ message: 'Invalid credentials' });
+        // Create refresh token tied to user ID
+        const refreshToken = await generateRefreshToken(user.id);
+        console.log('Generated refresh token:', refreshToken);
+        // Store refresh token in HTTP-only cookie
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+        });
+        // Generate an access token
+        const accessToken = await generateAccessToken(refreshToken);
+        console.log('Generated access token:', accessToken);
+        return res.json({ accessToken });
+    } catch (error) {
+        console.error('Signin error:', error);
+        return res.status(500).json({ message: 'Login failed' });
+    }
+});
+
+// Sign up a new user
+router.post('/signup', async (req, res) => {
+    const { username, email, password } = req.body;
+    if (!username || !email || !password) {
+        return res.status(400).json({ message: 'Username, email, and password are required' });
+    }
+    try {
+        // Check if username or email already exists
+        const existingByUsername = await prisma.user.findUnique({ where: { username } });
+        if (existingByUsername) {
+            return res.status(409).json({ message: 'Username already taken' });
+        }
+        const existingByEmail = await prisma.user.findUnique({ where: { email } });
+        if (existingByEmail) {
+            return res.status(409).json({ message: 'Email already registered' });
+        }
+        // Create new user (note: in production, hash the password)
+        const newUser = await prisma.user.create({
+            data: { username, email, password }
+        });
+        return res.status(201).json({ message: 'User created successfully', userId: newUser.id });
+    } catch (err) {
+        console.error('Signup error:', err);
+        return res.status(500).json({ message: 'Signup failed' });
+    }
 });
 
 module.exports = router;

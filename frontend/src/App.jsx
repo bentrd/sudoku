@@ -1,19 +1,11 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import SolverPage from './pages/SolverPage';
-import AnalyticsPage from './pages/AnalyticsPage';
-import Authentication from './pages/Authentication';
+import AuthProvider from "./components/authentication/AuthProvider";
+import Routes from "./Routes";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/solver" element={<SolverPage />} />
-        <Route path="/db" element={<AnalyticsPage />} />
-        <Route path="/auth" element={<Authentication />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Routes />
+    </AuthProvider>
   );
 }
 

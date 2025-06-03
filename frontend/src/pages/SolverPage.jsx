@@ -96,6 +96,7 @@ const SolverPage = () => {
             style={{ width: '500px' }}
           />
           <button
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
             onClick={() => {
               if (rawInput.length === 81) {
                 const arr = rawInput.split('').map(ch => (ch === '.' ? [] : parseInt(ch, 10)));
@@ -132,6 +133,7 @@ const SolverPage = () => {
 
           <div style={{ marginTop: '1rem' }}>
             <button
+              className="px-6 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
               onClick={async () => {
                 try {
                   const res = await axios.post('http://localhost:3001/api/sudoku/solve', { puzzle });
@@ -148,10 +150,18 @@ const SolverPage = () => {
 
           {techniques.length > 0 && (
             <div style={{ marginTop: '1rem' }}>
-              <button onClick={() => setStepIndex(i => Math.max(i - 1, 0))} disabled={stepIndex <= 0}>
+              <button 
+                className="px-4 py-2 bg-gray-500 text-white rounded mr-2 hover:bg-gray-600 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                onClick={() => setStepIndex(i => Math.max(i - 1, 0))} 
+                disabled={stepIndex <= 0}
+              >
                 Previous
               </button>
-              <button onClick={() => setStepIndex(i => Math.min(i + 1, techniques.length - 1))} disabled={stepIndex >= techniques.length - 1}>
+              <button 
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                onClick={() => setStepIndex(i => Math.min(i + 1, techniques.length - 1))} 
+                disabled={stepIndex >= techniques.length - 1}
+              >
                 Next
               </button>
             </div>

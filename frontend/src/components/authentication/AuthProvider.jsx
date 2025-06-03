@@ -1,5 +1,5 @@
 import axios from "axios";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useState } from "react";
 
 const AuthContext = createContext();
 
@@ -13,13 +13,58 @@ const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common["Authorization"] = "Bearer " + token;
-      localStorage.setItem('token',token);
-    } else {
-      delete axios.defaults.headers.common["Authorization"];
-      localStorage.removeItem('token')
+    const fetchMe = async () => {
+      try {
+        // Fetch user data from the API to verify the token
+        const response = await axios.get("localhost:3001/api/me");
+        console.log("User data fetched successfully:", response.data);
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        // If there's an error, clear the token
+        setToken(null);
+      }
     }
+    fetchMe();
+  }, []);
+
+  useLayoutEffect(() => {
+    const authInterceptor = axios.interceptors.request.use(
+      (config) => {
+        config.headers.Authorization = 
+        !config._retry && token ? `Bearer ${token}` : config.headers.Authorization;
+        return config;
+      });
+      return () => {
+        axios.interceptors.request.eject(authInterceptor);
+      };
+  }, [token]);
+
+  useLayoutEffect(() => {
+    const refreshInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+        // If the token is expired, clear it
+        if (error.response.status === 401 && error.response.data.message === "Unauthorized") {
+          try {
+            const response = await axios.get("localhost:3001/api/refreshToken");
+            setToken(response.data.accessToken);
+
+            originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
+            originalRequest._retry = true;
+            return axios(originalRequest);
+          } catch (refreshError) {
+            console.error("Error refreshing token:", refreshError);
+            // If refreshing fails, clear the token
+            setToken(null);
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => {
+      axios.interceptors.response.eject(refreshInterceptor);
+    };
   }, [token]);
 
   // Memoized value of the authentication context

@@ -8,10 +8,34 @@ datasource db {
 }
 
 model Game {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  puzzle    String
-  solution  String
-  difficulty Int
-  category  String
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  // store the puzzle string and solution directly
+  puzzle      String
+  solution    String
+  difficulty  Int
+  category    String
+  status      String   @default("in_progress") // in_progress, completed, failed
+  // participants in this game (many-to-many via GameUser)
+  participants GameUser[]
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  createdAt  DateTime @default(now())
+  username   String   @unique
+  email      String   @unique
+  password   String
+  // participations in games
+  participations GameUser[]
+}
+
+/// Join table for the many-to-many relation between Game and User
+model GameUser {
+  game   Game @relation(fields: [gameId], references: [id])
+  gameId Int
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  @@id([gameId, userId])
 }

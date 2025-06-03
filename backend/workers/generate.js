@@ -46,7 +46,7 @@ const { raw } = require('@prisma/client/runtime/library');
   let id = null;
   if (!puzzleParam) {
     const game = await prisma.game.create({
-      data: { puzzle: rawPuzzle, solution: rawSolution, difficulty: rating, category }
+      data: { puzzle: rawPuzzle, solution: rawSolution, difficulty: rating, category, status: 'standalone' }
     });
     id = game.id;
   }

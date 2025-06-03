@@ -1,82 +1,114 @@
-import React from 'react'
-import { useState } from 'react'
-import AuthButton from './AuthButton'
+import React, { useState } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import axios from 'axios'
+import AuthButton from './AuthButton';
 
-const LoginForm = () => {
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    
+const LoginForm = ({ onSwitchToSignup }) => {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const navigate = useNavigate();
+    const location = useLocation();
+    // Determine where to redirect after login
+    const fromPath = location.state?.from?.pathname || '/';
+
     const Login = async (e) => {
-        e.preventDefault()
-        if (!email || !password) {
-            alert('Please fill in both fields.')
-            return
-        }
+        e.preventDefault();
         try {
-            const response = await fetch('http://localhost:3001/api/auth/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password }),
-            })
-            if (!response.ok) {
-                const errorData = await response.json()
-                throw new Error(errorData.message || 'Login failed')
+            const response = await axios.post('http://localhost:3001/api/sudoku/login', {
+                username: email,
+                password,
+            });
+            const { accessToken } = response.data;
+            if (accessToken) {
+                localStorage.setItem('accessToken', accessToken);
+                // Redirect back to originally requested page or home
+                navigate(fromPath, { replace: true });
+            } else {
+                alert('Login failed: no token returned');
             }
-            const data = await response.json()
-            console.log('Login successful:', data)
-            // Handle successful login (e.g., store token, redirect)
-        } catch (error) {
-            console.error('Login error:', error)
-            alert(error.message || 'An error occurred during login')
+        } catch (err) {
+            console.error('Login error:', err);
+            alert(err.response?.data?.message || 'Invalid credentials');
         }
-    }
+    };
 
     return (
-        <div className="bg-white rounded-lg p-8 w-full max-w-md shadow-xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Login</h2>
-            
-            <form onSubmit={Login} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email Address
-                    </label>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter your email"
-                        required
-                    />
-                </div>
-                
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Password
-                    </label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Enter your password"
-                        required
-                    />
-                </div>
-                
-                <div className="pt-4">
+        <div className="min-h-screen min-w-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+            <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
+                <h2 className="text-3xl font-extrabold text-gray-800 text-center mb-8">Welcome Back</h2>
+
+                <form onSubmit={Login} className="space-y-6">
+                    <div>
+                        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                            Email or Username
+                        </label>
+                        <input
+                            id="email"
+                            type="text"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="you@example.com"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                            Password
+                        </label>
+                        <input
+                            id="password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="••••••••"
+                            required
+                        />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <input
+                                id="remember_me"
+                                name="remember_me"
+                                type="checkbox"
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="remember_me" className="ml-2 block text-sm text-gray-600">
+                                Remember me
+                            </label>
+                        </div>
+                        <div className="text-sm">
+                            <a href="#" className="font-medium text-blue-600 hover:text-blue-500 ml-4">
+                                Forgot your password?
+                            </a>
+                        </div>
+                    </div>
                     <AuthButton
                         text="Login"
-                        color="#007bff"
                         type="submit"
+                        color='bg-blue-600 hover:bg-blue-700'
                         onClick={Login}
+                        className="w-full"
                     />
-                </div>
-            </form>
+                </form>
+                {/* Separator and signup prompt */}
+                <hr className="my-6 border-gray-300" />
+                <p className="text-center text-sm text-gray-600">
+                    Don’t have an account?{' '}
+                    <button
+                        type="button"
+                        onClick={onSwitchToSignup}
+                        className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    >
+                        Sign up
+                    </button>
+                </p>
+            </div>
         </div>
     )
 }
 
-export default LoginForm
+export default LoginForm;

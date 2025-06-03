@@ -1,46 +1,21 @@
-import React from 'react'
+import React from 'react';
 
-const AuthButton = ({onClick, text, color}) => {
-
-    text = text || 'Click Me';
-    color = color || '#007bff';
-
-    if (typeof onClick !== 'object' && typeof onClick !== 'function') {
-        console.error('onClick must be a function', typeof onClick);
-        return null;
-    }
-    if (typeof text !== 'string') {
-        console.error('text must be a string', typeof text);
-        return null;
-    }
-    if (color && typeof color !== 'string') {
-        console.error('color must be a string', typeof color);
-        return null;
-    }
-    if (color && !/^#[0-9A-F]{6}$/i.test(color)) {
-        console.error('color must be a valid hex color code', color);
-        return null;
-    }
-
-    const style = {
-        backgroundColor: color,
-        color: 'white',
-        border: 'none',
-        padding: '10px 20px',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        fontSize: '16px',
-        minWidth: '150px',
-    }
-
+const AuthButton = ({
+  text,
+  color = 'bg-gray-800 hover:bg-gray-900',
+  type = 'button',
+  onClick,
+  className = '',
+}) => {
   return (
     <button
-        onClick={onClick}
-        style={style}
+      type={type}
+      onClick={onClick}
+      className={`${color} cursor-pointer py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 ${className}`}
     >
-        {text}
+      {text}
     </button>
-  )
-}
+  );
+};
 
-export default AuthButton
+export default AuthButton;

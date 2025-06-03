@@ -37,8 +37,8 @@ const HomePage = () => {
             }
             // If a puzzle query string is provided, load that puzzle; otherwise generate by difficulty
             const url = !isGenerate && puzzleParam
-                ? `http://localhost:3001/api/sudoku?puzzle=${puzzleParam}`
-                : `http://localhost:3001/api/sudoku?difficulty=${difficulty}`;
+                ? `http://localhost:3001/api/sudoku/generate?puzzle=${puzzleParam}`
+                : `http://localhost:3001/api/sudoku/generate?difficulty=${difficulty}`;
             // API returns puzzle and solution arrays
             const res = await axios.get(url);
             console.log('Puzzle response:', res);
@@ -145,7 +145,11 @@ const HomePage = () => {
                             </option>
                         ))}
                     </select>
-                    <button onClick={() => fetchPuzzle(true)} disabled={isGenerating}>
+                    <button 
+                        onClick={() => fetchPuzzle(true)} 
+                        disabled={isGenerating} 
+                        className='bg-blue-500 hover:bg-blue-700 disabled:bg-gray-400 text-white font-bold py-2 px-4 rounded ml-2 transition-colors'
+                    >
                         {isGenerating ? 'Generating…' : 'Generate New Puzzle'}
                     </button>
                 </div>
@@ -179,7 +183,7 @@ const HomePage = () => {
                 />
                 <button
                     onClick={() => window.open(`/solver?puzzle=${puzzleString}`, '_blank')}
-                    style={{ padding: '0.5rem 1rem', cursor: 'pointer' }}
+                    className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded cursor-pointer transition-colors"
                 >
                     Send to Solver
                 </button>

@@ -13,7 +13,6 @@ app.use((req, res, next) => {
 
 const sudokuRoutes = require('./routes/sudoku');
 app.use('/api/sudoku', sudokuRoutes);
-app.use('/api/sudoku/check', sudokuRoutes);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
