@@ -36,6 +36,7 @@ const AuthProvider = ({ children }) => {
             headers: { Authorization: `Bearer ${newAccess}` },
             withCredentials: true,
           });
+          console.log('User data after refresh:', retry.data);
           setUser(retry.data.user);
         } catch (refreshError) {
           console.error('Refresh failed:', refreshError);

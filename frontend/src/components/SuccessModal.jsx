@@ -38,7 +38,7 @@ const SuccessModal = ({ isOpen, onClose }) => {
       }`}
     >
       <div
-        className={`bg-white rounded-lg p-6 w-80 shadow-[0px_0px_20px_10px_rgba(0,0,0,0.25)] transform transition-all duration-500 ease-out ${
+        className={`bg-white rounded-lg p-6 w-80 shadow-[0px_0px_20px_5px_rgba(0,0,0,0.25)] transform transition-all duration-500 ease-out ${
           animateIn
             ? 'scale-100 translate-y-0 opacity-100'
             : 'scale-75 translate-y-12 opacity-0'

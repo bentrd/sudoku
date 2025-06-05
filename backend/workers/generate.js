@@ -11,13 +11,15 @@ const { raw } = require('@prisma/client/runtime/library');
   const { difficulty, puzzle: puzzleParam } = workerData;
 
   let puzzleGrid;
+  let id = null;
   if (puzzleParam) {
     // load stored game or raw string
     if (puzzleParam.length === 81) {
-      puzzleGrid = puzzleParam.split('').map(ch => (ch === '0' || ch === ' ' ? 0 : Number(ch)));
+      puzzleGrid = puzzleParam.split('').map(ch => (ch === ' ' ? 0 : Number(ch)));
     } else {
       const game = await prisma.game.findUnique({ where: { id: Number(puzzleParam) } });
       puzzleGrid = game.puzzle.split('').map(ch => (ch === ' ' ? 0 : Number(ch)));
+      id = game.id;
     }
   } else if (difficulty.toLowerCase() === 'random') {
     puzzleGrid = generator.generateRandomPuzzle();
@@ -38,7 +40,6 @@ const { raw } = require('@prisma/client/runtime/library');
   const rawPuzzle = puzzleGrid.flat().map(n => n === 0 ? ' ' : String(n)).join('');
   const rawSolution = solvedFlat.map(n => n === 0 ? ' ' : String(n)).join('');
 
-  let id = null;
   if (!puzzleParam) {
     const game = await prisma.game.create({
       data: { puzzle: rawPuzzle, solution: rawSolution, difficulty: rating, category, status: 'standalone' }

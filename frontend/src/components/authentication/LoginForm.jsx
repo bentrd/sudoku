@@ -1,50 +1,67 @@
 // frontend/src/components/authentication/LoginForm.jsx
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import useAuth from './useAuth'; // ← import the hook instead of AuthButton
+import useAuth from './useAuth';
 
 const LoginForm = ({ onSwitchToSignup }) => {
-    const [email, setEmail] = useState('');
+    const [emailOrUsername, setEmailOrUsername] = useState('');
     const [password, setPassword] = useState('');
-    const { login } = useAuth();            // ← grab login() from context
+    const [statusMsg, setStatusMsg] = useState(null); // { type: 'error'|'success', text: string }
+    const { login } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const fromPath = location.state?.from?.pathname || '/';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const success = await login({ username: email, password });
+        setStatusMsg(null);
+
+        const success = await login({ username: emailOrUsername, password });
         if (success) {
-            // login() already stored the token in context and localStorage
-            navigate(fromPath, { replace: true });
+            setStatusMsg({ type: 'success', text: 'Login successful! Redirecting…' });
+            // brief delay so user sees success banner
+            setTimeout(() => {
+                navigate(fromPath, { replace: true });
+            }, 800);
         } else {
-            alert('Invalid credentials');
+            setStatusMsg({ type: 'error', text: 'Invalid credentials. Please try again.' });
         }
     };
 
     return (
-        <div className="min-h-screen min-w-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-            <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
-                <h2 className="text-3xl font-extrabold text-gray-800 text-center mb-8">
+        <div className="min-w-screen h-[calc(100vh-4rem)] flex px-4">
+            <div className="bg-white rounded-xl m-auto shadow-2xl p-8 w-full max-w-md">
+                <h2 className="text-3xl font-extrabold text-gray-800 text-center mb-6">
                     Welcome Back
                 </h2>
+
+                {statusMsg && (
+                    <div
+                        className={`mb-6 px-4 py-2 text-center rounded ${statusMsg.type === 'success'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                    >
+                        {statusMsg.text}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <label
-                            htmlFor="email"
+                            htmlFor="emailOrUsername"
                             className="block text-sm font-medium text-gray-700 mb-2"
                         >
                             Email or Username
                         </label>
                         <input
-                            id="email"
+                            id="emailOrUsername"
                             type="text"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value={emailOrUsername}
+                            onChange={(e) => setEmailOrUsername(e.target.value)}
                             placeholder="you@example.com"
                             required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                     </div>
 
@@ -60,9 +77,9 @@ const LoginForm = ({ onSwitchToSignup }) => {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             placeholder="••••••••"
                             required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                     </div>
 
@@ -75,12 +92,13 @@ const LoginForm = ({ onSwitchToSignup }) => {
                 </form>
 
                 <hr className="my-6 border-gray-300" />
+
                 <p className="text-center text-sm text-gray-600">
                     Don't have an account?{' '}
                     <button
                         type="button"
                         onClick={onSwitchToSignup}
-                        className="text-blue-600 hover:underline font-medium cursor-pointer"
+                        className="text-blue-600 hover:underline font-medium"
                     >
                         Sign up
                     </button>

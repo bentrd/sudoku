@@ -520,7 +520,7 @@ const SudokuGrid = ({
                     return (
                         <div
                             key={index}
-                            className={`relative w-20 h-20 ${bgClass} ${borderClasses}`}
+                            className={`relative w-18 h-18 ${bgClass} ${borderClasses}`}
                             onMouseDown={(e) => handleMouseDown(index, e)}
                             onMouseEnter={() => handleMouseEnter(index)}
                             onContextMenu={(e) => e.preventDefault()}

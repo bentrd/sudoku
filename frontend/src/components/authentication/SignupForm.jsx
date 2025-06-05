@@ -1,37 +1,63 @@
-import { useState } from 'react';
+// frontend/src/components/authentication/SignupForm.jsx
+import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from './useAuth';
-import AuthButton from './AuthButton';
 
 const SignupForm = ({ onSwitchToLogin }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [statusMsg, setStatusMsg] = useState(null); // { type: 'error' | 'success', text: string }
   const { signup } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath = location.state?.from?.pathname || '/';
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    // Validate passwords match
+    setStatusMsg(null);
+
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      setStatusMsg({ type: 'error', text: 'Passwords do not match.' });
       return;
     }
+
     const success = await signup({ username, email, password });
     if (success) {
-      alert('Account created! Please log in.');
-      onSwitchToLogin();
+      setStatusMsg({ type: 'success', text: 'Account created! Redirecting…' });
+      setTimeout(() => {
+        navigate(fromPath, { replace: true });
+      }, 800);
     } else {
-      alert('Signup failed');
+      setStatusMsg({ type: 'error', text: 'Signup failed. Please try again.' });
     }
   };
 
   return (
-    <div className="min-h-screen min-w-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
-        <h2 className="text-3xl font-extrabold text-gray-800 text-center mb-8">Create Account</h2>
+    <div className="min-w-screen h-[calc(100vh-4rem)] flex px-4">
+      <div className="bg-white rounded-xl m-auto shadow-2xl p-8 w-full max-w-md">
+        <h2 className="text-3xl font-extrabold text-gray-800 text-center mb-6">
+          Create Account
+        </h2>
+
+        {statusMsg && (
+          <div
+            className={`mb-6 px-4 py-2 text-center rounded ${statusMsg.type === 'success'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-red-100 text-red-800'
+              }`}
+          >
+            {statusMsg.text}
+          </div>
+        )}
+
         <form onSubmit={handleSignup} className="space-y-6">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="username"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Username
             </label>
             <input
@@ -39,14 +65,17 @@ const SignupForm = ({ onSwitchToLogin }) => {
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Your username"
               required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Email
             </label>
             <input
@@ -54,14 +83,17 @@ const SignupForm = ({ onSwitchToLogin }) => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="you@example.com"
               required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Password
             </label>
             <input
@@ -69,14 +101,17 @@ const SignupForm = ({ onSwitchToLogin }) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="••••••••"
               required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="confirmPassword"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               Confirm Password
             </label>
             <input
@@ -84,29 +119,28 @@ const SignupForm = ({ onSwitchToLogin }) => {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="••••••••"
               required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
-          <div>
-            <AuthButton
-              text="Sign Up"
-              color="bg-green-600 hover:bg-green-700"
-              type="submit"
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-lg font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            />
-          </div>
+          <button
+            type="submit"
+            className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+          >
+            Sign Up
+          </button>
         </form>
-        {/* Separator and login prompt */}
+
         <hr className="my-6 border-gray-300" />
+
         <p className="text-center text-sm text-gray-600">
           Already have an account?{' '}
           <button
             type="button"
             onClick={onSwitchToLogin}
-            className="text-blue-600 hover:underline font-medium cursor-pointer"
+            className="text-blue-600 hover:underline font-medium"
           >
             Login
           </button>

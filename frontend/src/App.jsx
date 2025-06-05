@@ -5,7 +5,9 @@ import HomePage from './pages/HomePage';
 import SolverPage from './pages/SolverPage';
 import AuthenticationPage from './pages/AuthenticationPage';
 import ProtectedRoute from './components/authentication/ProtectedRoute';
-import AnalyticsPage from './pages/AnalyticsPage';
+import DatabasePage from './pages/DatabasePage';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 
 function App() {
   return (
@@ -22,7 +24,9 @@ function App() {
         {/* All routes below require a valid auth token */}
         <Route element={<ProtectedRoute />}>
           <Route path="/solver" element={<SolverPage />} />
-          <Route path="/db" element={<AnalyticsPage />} />
+          <Route path="/db" element={<DatabasePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
         {/* Fallback for any unmatched URL */}

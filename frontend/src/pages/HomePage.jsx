@@ -1,6 +1,6 @@
 // frontend/src/pages/HomePage.jsx
 import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import SudokuGrid from '../components/SudokuGrid';
 import SuccessModal from '../components/SuccessModal';
 import axios from 'axios';
@@ -12,8 +12,8 @@ const HomePage = () => {
     const puzzleParam = params.get('puzzle') || '';
 
     // “puzzle” and “originalPuzzle” are both arrays of length 81.
-    //  – puzzle: initial digits and zeros for blanks (server does *not* include candidates here).
-    //  – originalPuzzle: same alignment; if originalPuzzle[i] ∈ 1..9, that cell is “locked” (given).
+    //   – puzzle: initial digits and zeros for blanks (server does *not* include candidates here).
+    //   – originalPuzzle: same alignment; if originalPuzzle[i] ∈ 1..9, that cell is “locked” (given).
     const [puzzle, setPuzzle] = useState(Array(81).fill(0));
     const [originalPuzzle, setOriginalPuzzle] = useState(Array(81).fill(0));
 
@@ -35,8 +35,7 @@ const HomePage = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [dots, setDots] = useState('');
 
-    // Keep a string version of the puzzle for sharing / solver link
-    const [puzzleString, setPuzzleString] = useState('');
+    const navigate = useNavigate();
 
     // Fetch either the puzzle from URL or generate one by difficulty
     const fetchPuzzle = async (isGenerate = false) => {
@@ -57,13 +56,14 @@ const HomePage = () => {
 
             const res = await axios.get(url);
             // Server returns:
-            //  res.data.puzzle   = an array of length 81 (numbers 0..9, where 0 = empty)
-            //  res.data.solution = an array of length 81 (numbers 1..9)
-            //  res.data.rating   = difficulty score
-            //  res.data.category = category name (e.g. “Easy”)
+            //   res.data.puzzle   = an array of length 81 (numbers 0..9, where 0 = empty)
+            //   res.data.solution = an array of length 81 (numbers 1..9)
+            //   res.data.rating   = difficulty score
+            //   res.data.category = category name (e.g. “Easy”)
 
             const rawPuzzle = res.data.puzzle.map(n => Number(n));
             const rawSolution = res.data.solution.map(n => Number(n));
+            const id = res.data.id;
 
             setPuzzle(rawPuzzle);
             // “originalPuzzle” is exactly the givens; all nonzero entries are locked in place
@@ -74,10 +74,10 @@ const HomePage = () => {
             setCategory(res.data.category);
             setHasCompleted(false);
             setShowModal(false);
+            navigate(`?puzzle=${id}`, { replace: true });
 
-            // Build a “string” where dots represent empties
-            const str = rawPuzzle.map(v => (v === 0 ? '.' : v)).join('');
-            setPuzzleString(str);
+            // Build a “string” where dots represent empties (for debug / copy)
+            //const str = rawPuzzle.map(v => (v === 0 ? '.' : v)).join('');
         } catch (err) {
             console.error('Failed to fetch puzzle:', err);
         } finally {
@@ -100,7 +100,7 @@ const HomePage = () => {
             return;
         }
         const interval = setInterval(() => {
-            setDots(d => (d.length < 3 ? d + '.' : ''));
+            setDots(prev => (prev.length < 3 ? prev + '.' : ''));
         }, 500);
         return () => clearInterval(interval);
     }, [isGenerating]);
@@ -108,74 +108,106 @@ const HomePage = () => {
     // Callback passed down to SudokuGrid; receives a flat array of 81 digits (0 if empty)
     const handleBoardChange = digits => {
         if (!solution) return console.error('No solution available yet!');
-        console.log('Board changed:', digits);
         // If not all filled or already completed once, do nothing
         const allFilled = digits.every(v => v.digit >= 1 && v.digit <= 9);
         if (!allFilled || hasCompleted) return;
 
         // Compare each entry with solution
         const correct = digits.every((val, i) => val.digit === solution[i]);
-        console.log('User completed the puzzle:', correct);
-        if (correct) {
-            setShowModal(true);
-        }
+        if (!correct) return;
+        setShowModal(true);
         setHasCompleted(true);
     };
 
     return (
-        <div className="flex flex-col items-center w-full min-h-screen min-w-screen p-4">
-            <h1 className="text-3xl font-bold mb-4">Sudoku Battle</h1>
+        <div className="h-[calc(100vh-4rem)] min-w-screen flex flex-col items-center p-4">
+            {/* Header / Controls */}
+            {!puzzleParam && (
+                <div className="w-full max-w-4xl">
+                    <div className="bg-white rounded-lg shadow-lg border border-gray-200 px-6 py-4 flex flex-col md:items-center space-y-4 md:space-y-0">
+                        <div className="flex flex-col md:flex-row md:items-center md:space-x-4">
+                            <div className='flex items-center space-x-2 rounded-full bg-gray-100 pl-4 shadow-sm'>
+                                <label className="text-gray-700 font-medium">Difficulty:</label>
+                                <div className="relative inline-block">
+                                    <select
+                                        value={difficulty}
+                                        onChange={e => setDifficulty(e.target.value)}
+                                        className="
+                              appearance-none
+                              bg-white
+                              text-gray-700
+                              text-sm
+                              font-medium
+                              px-4
+                              py-2
+                              rounded-full
+                              border border-gray-300
+                              focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent
+                              cursor-pointer
+                              pr-8 
+                            "
+                                    >
+                                        <option value="Random">Random</option>
+                                        {difficulties.map(diff => (
+                                            <option key={diff.name} value={diff.name}>
+                                                {diff.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <div className="pointer-events-none absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            className="h-4 w-4"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 9l-7 7-7-7"
+                                            />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => fetchPuzzle(true)}
+                                disabled={isGenerating}
+                                className={`mt-3 md:mt-0 px-4 py-2 font-semibold rounded-full transition-colors ${isGenerating
+                                    ? 'bg-gray-300 text-gray-700 cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                            >
+                                {isGenerating ? `Generating...` : 'Generate New Puzzle'}
+                            </button>
+                        </div>
+                        <br className="w-full md:w-auto border-gray-200 my-2 md:my-0"></br>
 
-            <div className="mb-6 flex flex-col items-center space-y-2">
-                <div className="flex items-center space-x-2">
-                    <label className="font-medium">Difficulty:</label>
-                    <select
-                        value={difficulty}
-                        onChange={e => setDifficulty(e.target.value)}
-                        className="border border-gray-300 rounded px-2 py-1"
-                    >
-                        <option value="Random">Random</option>
-                        {difficulties.map(diff => (
-                            <option key={diff.name} value={diff.name}>
-                                {diff.name}
-                            </option>
-                        ))}
-                    </select>
-
-                    <button
-                        onClick={() => fetchPuzzle(true)}
-                        disabled={isGenerating}
-                        className={`ml-4 px-4 py-2 font-semibold rounded transition-colors ${isGenerating
-                                ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700'
-                            }`}
-                    >
-                        {isGenerating ? `Generating${dots}` : 'Generate New Puzzle'}
-                    </button>
+                        <div className="text-gray-600 font-medium text-center md:text-right">
+                            Choose a category and generate a puzzle
+                        </div>
+                    </div>
                 </div>
+            )}
 
-                <div className="font-medium mt-2">
-                    {isGenerating
-                        ? `Creating a new puzzle${dots}`
-                        : rating == null
-                            ? 'Choose a category and generate a puzzle'
-                            : `Rating: ${rating}${category ? ` (${category})` : ''}`}
+            {/* Sudoku Grid */}
+            <div className="w-full max-w-4xl mt-6">
+                <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4">
+                    <p className="text-gray-600">
+                        {rating ? `Rating: ${rating}${category ? ` (${category})` : ''}` : 'No rating available'}
+                    </p>
+                    <SudokuGrid
+                        initialPuzzle={puzzle}
+                        originalPuzzle={originalPuzzle}
+                        disabled={isGenerating}
+                        onBoardChange={handleBoardChange}
+                    />
                 </div>
             </div>
 
-            <SudokuGrid
-                initialPuzzle={puzzle}
-                originalPuzzle={originalPuzzle}
-                disabled={isGenerating}
-                onBoardChange={handleBoardChange}
-            />
-
-            {/* Debug */}
-            <button onClick={() => setShowModal(true)} className="mt-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
-                Show win modal
-            </button>
-
-            {/* Show the modal if the puzzle is solved correctly */}
+            {/* Success Modal */}
             <SuccessModal isOpen={showModal} onClose={() => setShowModal(false)} />
         </div>
     );

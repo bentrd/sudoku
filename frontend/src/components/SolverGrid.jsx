@@ -1,5 +1,6 @@
 // frontend/src/components/SudokuGrid.jsx
-import './SolverGrid.css';
+
+import styles from './SolverGrid.module.css';
 
 const SolverGrid = ({
     puzzle,
@@ -11,6 +12,7 @@ const SolverGrid = ({
     highlightedAdditions = Array(81).fill(0),
     disabled = false,
 }) => {
+    
     const toggleHidden = (cellIdx, digit) => {
         const newPuzzle = puzzle.slice();
         if (Array.isArray(newPuzzle[cellIdx])) {
@@ -37,14 +39,22 @@ const SolverGrid = ({
         return (
             <td
                 key={index}
-                className={`cell-wrapper ${isOrig ? 'original' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                className={`
+                  ${styles['cell-wrapper']}
+                  ${isOrig        ? styles.original    : ''}
+                  ${isHighlighted ? styles.highlighted : ''}
+                `}
             >
                 <input
-                    className={`cell ${isOrig ? 'original' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                    className={`
+                      ${styles.cell}
+                      ${isOrig        ? styles.original    : ''}
+                      ${isHighlighted ? styles.highlighted : ''}
+                    `}
                     type="text"
                     maxLength={1}
                     value={displayVal}
-                    disabled={isOrig || mode === 'candidate'}
+                    disabled={true}
                     onChange={e => {
                         let v = e.target.value;
                         if (/^[1-9]$/.test(v) || v === '') onChange(index, v);
@@ -56,16 +66,16 @@ const SolverGrid = ({
                 {/* Candidates overlay always visible */}
                 {Array.isArray(val) && val.length > 0 && (
                     <div
-                        className={`candidate-cell`}
+                        className={styles['candidate-cell']}
                         style={{ pointerEvents: mode === 'candidate' ? 'auto' : 'none' }}
                     >
-                        <div className="candidates-grid">
+                        <div className={styles['candidates-grid']}>
                             {Array.from({ length: 9 }, (_, i) => {
                                 const digit = i + 1;
                                 const isCandidate = val.includes(digit);
-                                const classes = ['candidate-digit'];
-                                if (isRemoved(index, digit)) classes.push('removed-candidate');
-                                else if (!isCandidate) classes.push('hidden');
+                                const classes = [styles['candidate-digit']];
+                                if (isRemoved(index, digit))      classes.push(styles['removed-candidate']);
+                                else if (!isCandidate)            classes.push(styles.hidden);
                                 return (
                                     <div
                                         key={i}
@@ -87,7 +97,7 @@ const SolverGrid = ({
 
     return (
         <table
-            className="sudoku-table"
+            className={styles['sudoku-table']}
             key={`table-${puzzle.join('')}`}
         >
             <colgroup><col /><col /><col /></colgroup>

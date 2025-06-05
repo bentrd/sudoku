@@ -33,7 +33,7 @@ const AuthenticationPage = () => {
     };
 
     return (
-        <div className="flex flex-row items-center justify-center min-h-screen min-w-screen">
+        <>
             {isSignup ? (
                 <SignupForm
                     onSwitchToLogin={() => setIsSignup(false)}
@@ -45,7 +45,7 @@ const AuthenticationPage = () => {
                     onLogin={handleLogin}
                 />
             )}
-        </div>
+        </>
     );
 };
 

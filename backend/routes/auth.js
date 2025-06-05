@@ -3,8 +3,10 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const cookieParser = require('cookie-parser');
+const bcrypt = require('bcrypt');
 
 const { TextEncoder } = require('util');
+const { cp } = require('fs');
 
 const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || 'test_secret_key';
 const jwtSecret = new TextEncoder().encode(JWT_SECRET_KEY);
@@ -109,7 +111,8 @@ router.post('/login', async (req, res) => {
         if (!user) {
             user = await prisma.user.findUnique({ where: { email: username } });
         }
-        if (!user || user.password !== password) {
+        const passwordMatch = await bcrypt.compare(password, user ? user.password : '');
+        if (!user || !passwordMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
         const refreshToken = await generateRefreshToken(user.id);
@@ -143,13 +146,103 @@ router.post('/signup', async (req, res) => {
         if (existingByEmail) {
             return res.status(409).json({ message: 'Email already registered' });
         }
+        const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = await prisma.user.create({
-            data: { username, email, password }
+            data: { username, email, password: hashedPassword }
         });
         return res.status(201).json({ message: 'User created successfully', userId: newUser.id });
     } catch (err) {
         console.error('Signup error:', err);
         return res.status(500).json({ message: 'Signup failed' });
+    }
+});
+
+// Change password for the current user
+router.post('/change-password', async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const token = authHeader.split(' ')[1];
+    console.log('Access token:', token);
+    const accessPayload = await verifyToken(token, { returnPayload: true });
+    if (!accessPayload) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const refreshToken = accessPayload.data;
+    const refreshPayload = await verifyToken(refreshToken, { returnPayload: true });
+    console.log('Refresh token:', refreshToken);
+    console.log('Refresh token payload:', refreshPayload);
+    if (!refreshPayload) {  
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const userId = refreshPayload.data;     
+
+    // Update the user's password in the database
+    try {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: 'Current password and new password are required' });
+        }
+        const hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
+        await prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword }
+        });
+        res.json({ message: 'Password changed successfully' });
+    } catch (err) {
+        console.error('Error changing password:', err);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.post('/update-profile', async (req, res) => {    
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const token = authHeader.split(' ')[1];
+    const accessPayload = await verifyToken(token, { returnPayload: true });
+    if (!accessPayload) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const refreshToken = accessPayload.data;
+    const refreshPayload = await verifyToken(refreshToken, { returnPayload: true });
+    if (!refreshPayload) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    const userId = refreshPayload.data;
+
+    try {
+        const { username, email } = req.body;
+        if (!username || !email) {
+            return res.status(400).json({ message: 'Username and email are required' });
+        }
+        // Check if the username or email already exists for another user
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { username, id: { not: userId } },
+                    { email, id: { not: userId } }
+                ]
+            }
+        });
+        if (existingUser) {
+            return res.status(409).json({ message: 'Username or email already in use' });
+        }
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: { username, email },
+            select: { id: true, username: true, email: true }
+        });
+        res.json({ message: 'Profile updated successfully', user: updatedUser });
+    } catch (err) {
+        console.error('Error updating profile:', err);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 
