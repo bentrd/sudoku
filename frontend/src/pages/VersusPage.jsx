@@ -260,7 +260,7 @@ const VersusPage = () => {
         />
       )}
 
-      <div className="min-h-screen flex flex-col items-center p-4 bg-gray-50">
+      <div className="min-h-screen min-w-screen flex flex-col items-center p-4">
         <div className="w-full max-w-4xl">
           <div className="flex flex-row gap-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 mb-6">
             {/* Current user progress */}
