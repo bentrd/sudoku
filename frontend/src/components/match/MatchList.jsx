@@ -40,7 +40,7 @@ const MatchCard = ({ match }) => {
     // Assume match.winnerId is null if not finished, else an ID.
     let tint = 'bg-gray-100';
     let borderColor = 'border-gray-300';
-    console.log('Match data:', match);
+    // console.log('Match data:', match);
     if (match.winnerId) {
         if (match.winnerId === user.id) {
             tint = 'bg-green-100';
@@ -53,7 +53,7 @@ const MatchCard = ({ match }) => {
 
     // Parse createdAt as Date
     const createdAt = new Date(match.createdAt);
-    console.log('Match created at:', match);
+    // console.log('Match created at:', match);
 
     // Effect: update elapsed every second if match not finished
     useEffect(() => {
@@ -89,11 +89,7 @@ const MatchCard = ({ match }) => {
                 </span>
             </div>
             {/* You can add more details here, e.g. difficulty/category if available: */}
-            {match.difficulty && (
-                <div className="mt-2 text-sm text-gray-700">
-                    Difficulty: {match.difficulty}, Category: {match.category}
-                </div>
-            )}
+            {match.status}
         </div>
     );
 };

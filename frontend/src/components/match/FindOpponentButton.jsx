@@ -4,10 +4,9 @@ import useAuth from '../authentication/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const FindOpponentButton = ({ className }) => {
-    const { accessToken } = useAuth();
+    const { accessToken, user } = useAuth();
     const navigate = useNavigate();
     const [status, setStatus] = useState('idle'); // 'idle' | 'waiting' | 'matched'
-    const [matchInfo, setMatchInfo] = useState(null);
 
     // Poll /api/match/status every 2 seconds if waiting
     useEffect(() => {
@@ -21,17 +20,12 @@ const FindOpponentButton = ({ className }) => {
                     );
                     if (resp.data.status === 'matched') {
                         setStatus('matched');
-                        setMatchInfo(resp.data.match);
                         clearInterval(intervalId);
+                        console.log('Match found:', resp.data);
                         const matchId = resp.data.match.id || resp.data.match.matchId;
                         if (matchId) {
                             const url = `/versus/${matchId}`;
                             navigate(url);
-                            setTimeout(() => {
-                                if (window.location.pathname !== url) {
-                                    window.location.href = url;
-                                }
-                            }, 0);
                         }
                     }
                 } catch (err) {
@@ -47,7 +41,7 @@ const FindOpponentButton = ({ className }) => {
         try {
             const resp = await axios.post(
                 `${import.meta.env.VITE_API_BASE_URL}/api/match/join`,
-                {},
+                { userId: user.id },
                 { headers: { Authorization: `Bearer ${accessToken}` } }
             );
             if (resp.data.status === 'matched') {
@@ -58,12 +52,6 @@ const FindOpponentButton = ({ className }) => {
                     const url = `/versus/${matchId}`;
                     // Navigate via React Router immediately
                     navigate(url);
-                    // Fallback: if not navigated by React Router, force a full reload
-                    setTimeout(() => {
-                        if (window.location.pathname !== url) {
-                            window.location.href = url;
-                        }
-                    }, 0);
                 }
             } else {
                 setStatus('waiting');

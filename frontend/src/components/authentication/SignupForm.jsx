@@ -27,7 +27,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
     if (success) {
       setStatusMsg({ type: 'success', text: 'Account created! Redirecting…' });
       setTimeout(() => {
-        navigate("/auth", { replace: true, state: { from: fromPath } });
+        onSwitchToLogin();
       }, 800);
     } else {
       setStatusMsg({ type: 'error', text: 'Signup failed. Please try again.' });

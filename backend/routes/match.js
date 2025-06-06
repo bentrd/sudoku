@@ -37,7 +37,6 @@ router.post('/join', requireAuth, async (req, res) => {
         // User is already the sole participant
         return res.json({ status: 'waiting' });
       }
-      // 1) Add second participant
       await prisma.matchParticipant.create({ data: { matchId: pendingMatch.id, userId: userA } });
 
       // 2) Generate via worker to reuse existing logic
@@ -56,16 +55,10 @@ router.post('/join', requireAuth, async (req, res) => {
           const flatSolution = flatSolutionArr.map(n => String(n)).join('');
           console.log(`Generated puzzle for match: ${flatPuzzle}`);
 
-          // 3) Create Game row (omit id to let Prisma auto-generate)
-          const newGame = await prisma.game.create({
-            data: { puzzle: flatPuzzle, solution: flatSolution, difficulty: difficultyScore, category: categoryName }
-          });
-          gameId = newGame.id;
-
-          // 4) Update Match: link to Game, set status to 'matched'
+          // 4) Update Match: link to Game, set status to 'started'
           const updatedMatch = await prisma.match.update({
             where: { id: pendingMatch.id },
-            data: { gameId: gameId, status: 'matched' },
+            data: { gameId: gameId, status: 'started' },
             include: { participants: true }
           });
 
@@ -83,6 +76,7 @@ router.post('/join', requireAuth, async (req, res) => {
           console.error('Error creating match after worker message:', err);
           // If game generation fails, remove the match
           await prisma.match.delete({ where: { id: pendingMatch.id } });
+          await prisma.matchParticipant.deleteMany({ where: { matchId: pendingMatch.id } });
           return res.status(500).json({ message: 'Failed to create match' });
         }
 
@@ -123,19 +117,19 @@ router.post('/join', requireAuth, async (req, res) => {
 router.get('/status', requireAuth, async (req, res) => {
   const userId = req.userId;
   try {
-    // Find a MatchParticipant where userId = this user and match.status = 'matched'
+    // Find a MatchParticipant where userId = this user and match.status = 'started'
     const participant = await prisma.matchParticipant.findFirst({
       where: {
-      userId: userId,
-      match: { status: 'matched' }
+        userId: userId,
+        match: { status: 'started' }
       },
       include: {
-      match: true
+        match: true
       },
       orderBy: {
-      match: {
-        createdAt: 'desc'
-      }
+        match: {
+          createdAt: 'desc'
+        }
       }
     });
     if (participant && participant.match) {
