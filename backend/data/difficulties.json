@@ -1,19 +1,19 @@
 [
     {
         "name": "Easy",
-        "maxScore": 150
+        "maxScore": 90
     },
     {
         "name": "Medium",
-        "maxScore": 300
+        "maxScore": 200
     },
     {
         "name": "Hard",
-        "maxScore": 600
+        "maxScore": 500
     },
     {
         "name": "Very Hard",
-        "maxScore": 1000
+        "maxScore": 800
     },
     {
         "name": "Extreme",

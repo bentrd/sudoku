@@ -35,8 +35,8 @@ model Match {
   createdAt DateTime @default(now())
 
   // Which puzzle is being played
-  game   Game   @relation(fields: [gameId], references: [id])
-  gameId Int
+  game   Game?  @relation(fields: [gameId], references: [id])
+  gameId Int?
   status String @default("pending")
 
   winnerId  Int?

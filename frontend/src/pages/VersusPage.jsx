@@ -81,6 +81,19 @@ const VersusPage = () => {
       return;
     }
 
+    // Reset state when matchId changes (before fetching new match)
+    if (matchId) {
+      setLoading(true);
+      setMyBoardState(null);
+      setMyProgress(0);
+      setMyProgressColor('green');
+      setOpponentProgress(0);
+      setOppProgressColor('green');
+      setWinnerId(null);
+      setTimeTaken(null);
+      setShowModal(false);
+    }
+
     // No matchId → show “Your Matches” + “Find Opponent”
     if (!matchId) {
       const fetchMatches = async () => {

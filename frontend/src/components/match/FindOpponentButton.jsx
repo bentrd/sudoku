@@ -1,5 +1,3 @@
-// frontend/src/pages/FindOpponentPage.jsx
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import useAuth from '../authentication/useAuth';
@@ -17,9 +15,10 @@ const FindOpponentButton = ({ className }) => {
         if (status === 'waiting') {
             intervalId = setInterval(async () => {
                 try {
-                    const resp = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/match/status`, {
-                        headers: { Authorization: `Bearer ${accessToken}` }
-                    });
+                    const resp = await axios.get(
+                        `${import.meta.env.VITE_API_BASE_URL}/api/match/status`,
+                        { headers: { Authorization: `Bearer ${accessToken}` } }
+                    );
                     if (resp.data.status === 'matched') {
                         setStatus('matched');
                         setMatchInfo(resp.data.match);
@@ -41,7 +40,7 @@ const FindOpponentButton = ({ className }) => {
             }, 2000);
         }
         return () => clearInterval(intervalId);
-    }, [status, accessToken]);
+    }, [status, accessToken, navigate]);
 
     const handleFindOpponent = async () => {
         setStatus('waiting');

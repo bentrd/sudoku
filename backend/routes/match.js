@@ -4,50 +4,43 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { requireAuth } = require('../utils/AuthUtils');
+const { time } = require('console');
 
 const prisma = new PrismaClient();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// In‐memory queue & map. (If the server restarts, the queue is lost.)
-// ─────────────────────────────────────────────────────────────────────────────
-const waitingQueue = []; // Array of userIds waiting
-const pendingMatches = new Map();
-// pendingMatches: userId → { matchId, gameId, puzzle, solution, difficulty, category }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // POST /api/match/join
-//
 // Request headers: Authorization: Bearer <accessToken>
 // Body: (empty)
-//
-// - If there is already someone waiting, immediately pair them off.
-//   * Generate a new Sudoku puzzle (using the same logic as /api/sudoku/generate).
-//   * Insert a new Game row (with puzzle, solution, difficulty, category).
-//   * Insert a new Match row linking both players + winner/loser null.
-//   * Put both userIds into pendingMatches → so /status can pick it up.
-//   * Return the new match object immediately to the caller.
-// - If nobody is waiting, place userId in waitingQueue and return { status: 'waiting' }.
-// ─────────────────────────────────────────────────────────────────────────────
+// - If there is an existing match in 'pending' status (i.e. one participant), pair them.
+//   * Generate a new Sudoku puzzle (using existing worker).
+//   * Insert a new Game row, update the Match with gameId and status 'matched', add second participant.
+//   * Return the new match info immediately to both callers via their status polling.
+// - If no pending match exists, create a new Match with status 'pending' and one MatchParticipant.
+//   Return { status: 'waiting' }.
 router.post('/join', requireAuth, async (req, res) => {
   const userA = req.userId;
+  try {
+    // Check for a pending match with only one participant, excluding matches where this user is already a participant
+    const pendingMatch = await prisma.match.findFirst({
+      where: {
+        status: 'pending',
+        participants: { none: { userId: userA } }
+      },
+      orderBy: { createdAt: 'desc' },
+      include: { participants: true }
+    });
 
-  // 1) If this user is already “pending” (matched but not yet polled), bail:
-  if (pendingMatches.has(userA)) {
-    const matchInfo = pendingMatches.get(userA);
-    return res.json({ status: 'matched', match: matchInfo });
-  }
+    if (pendingMatch && pendingMatch.participants.length === 1) {
+      const userB = pendingMatch.participants[0].userId;
+      if (userB === userA) {
+        // User is already the sole participant
+        return res.json({ status: 'waiting' });
+      }
+      // 1) Add second participant
+      await prisma.matchParticipant.create({ data: { matchId: pendingMatch.id, userId: userA } });
 
-  // 2) If user is already in queue waiting, just return waiting:
-  if (waitingQueue.includes(userA)) {
-    return res.json({ status: 'waiting' });
-  }
-
-  // 3) If someone else is waiting, pair them:
-  if (waitingQueue.length > 0) {
-    const userB = waitingQueue.shift(); // remove the first waiting user
-
-    // Generate via worker to reuse existing logic
-    try {
+      // 2) Generate via worker to reuse existing logic
       const { Worker } = require('worker_threads');
       const worker = new Worker(
         require('path').resolve(__dirname, '../workers/generate.js'),
@@ -55,77 +48,122 @@ router.post('/join', requireAuth, async (req, res) => {
       );
 
       worker.once('message', async (data) => {
-        const { id: gameId, puzzle: flatPuzzleArr, solution: flatSolutionArr, rating: difficultyScore, category: categoryName } = data.msg;
-        // flatPuzzleArr and flatSolutionArr are arrays of numbers or 0s; convert to strings
-        const flatPuzzle = flatPuzzleArr.map(n => (n === 0 ? '0' : String(n))).join('');
-        const flatSolution = flatSolutionArr.map(n => String(n)).join('');
-        console.log(`Generated puzzle for match: ${flatPuzzle}`);
+        var matchInfo = null;
+        try {
+          let gameId = data.msg.id;
+          const { puzzle: flatPuzzleArr, solution: flatSolutionArr, rating: difficultyScore, category: categoryName } = data.msg;
+          const flatPuzzle = flatPuzzleArr.map(n => (n === 0 ? '0' : String(n))).join('');
+          const flatSolution = flatSolutionArr.map(n => String(n)).join('');
+          console.log(`Generated puzzle for match: ${flatPuzzle}`);
 
-        // Create Match row linking these two players to existing Game (gameId)
-        const newMatch = await prisma.match.create({
-          data: {
-            gameId: gameId,
-            status: 'matched',
-            participants: {
-              create: [
-                { userId: userA },
-                { userId: userB },
-              ],
-            },
-          },
-          include: { participants: true },
-        });
+          // 3) Create Game row (omit id to let Prisma auto-generate)
+          const newGame = await prisma.game.create({
+            data: { puzzle: flatPuzzle, solution: flatSolution, difficulty: difficultyScore, category: categoryName }
+          });
+          gameId = newGame.id;
 
-        const matchInfo = {
-          matchId: newMatch.id,
-          gameId,
-          puzzle: flatPuzzle,
-          solution: flatSolution,
-          difficulty: difficultyScore,
-          category: categoryName,
-          opponent: userB === userA ? null : userB,
-        };
+          // 4) Update Match: link to Game, set status to 'matched'
+          const updatedMatch = await prisma.match.update({
+            where: { id: pendingMatch.id },
+            data: { gameId: gameId, status: 'matched' },
+            include: { participants: true }
+          });
 
-        pendingMatches.set(userA, matchInfo);
-        pendingMatches.set(userB, matchInfo);
+          // Build matchInfo to return
+          matchInfo = {
+            matchId: updatedMatch.id,
+            gameId,
+            puzzle: flatPuzzle,
+            solution: flatSolution,
+            difficulty: difficultyScore,
+            category: categoryName,
+            opponent: userB === userA ? null : userB,
+          };
+        } catch (err) {
+          console.error('Error creating match after worker message:', err);
+          // If game generation fails, remove the match
+          await prisma.match.delete({ where: { id: pendingMatch.id } });
+          return res.status(500).json({ message: 'Failed to create match' });
+        }
+
         return res.json({ status: 'matched', match: matchInfo });
       });
 
       worker.once('error', err => {
         console.error('Worker error in match join:', err);
-        // put userB back into queue
-        waitingQueue.unshift(userB);
+        // If game generation fails, remove all participants from the pending match and delete it
+        prisma.matchParticipant.deleteMany({ where: { matchId: pendingMatch.id } }).catch(delErr => {
+          console.error('Failed to delete pending match participants after worker error:', delErr);
+        });
+        prisma.match.delete({ where: { id: pendingMatch.id } }).catch(delErr => {
+          console.error('Failed to delete pending match after worker error:', delErr);
+        });
         return res.status(500).json({ message: 'Failed to create match' });
       });
-      return; // <— add this return so we don’t fall through to pushing userA
-    } catch (err) {
-      console.error('Error pairing users in match:', err);
-      waitingQueue.unshift(userB);
-      return res.status(500).json({ message: 'Failed to create match' });
+    } else {
+      // No pending match: create a new one in 'pending' state
+      const newMatch = await prisma.match.create({
+        data: {
+          status: 'pending',
+          participants: { create: { userId: userA } }
+        }
+      });
+      return res.json({ status: 'waiting' });
     }
+  } catch (err) {
+    console.error('Error in /api/match/join:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
-
-  // 4) Otherwise, nobody is waiting; put this user into the queue
-  waitingQueue.push(userA);
-  return res.json({ status: 'waiting' });
 });
 
 
-// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/match/status
-//
 // Request headers: Authorization: Bearer <accessToken>
-//
-// - If the user has a pending match (in pendingMatches), return it.
-// - Otherwise return { status: 'waiting' }.
-// ─────────────────────────────────────────────────────────────────────────────
-router.get('/status', requireAuth, (req, res) => {
+// - If the user has a matched game, return it. Otherwise return { status: 'waiting' }.
+router.get('/status', requireAuth, async (req, res) => {
   const userId = req.userId;
-  if (pendingMatches.has(userId)) {
-    const matchInfo = pendingMatches.get(userId);
-    return res.json({ status: 'matched', match: matchInfo });
+  try {
+    // Find a MatchParticipant where userId = this user and match.status = 'matched'
+    const participant = await prisma.matchParticipant.findFirst({
+      where: {
+      userId: userId,
+      match: { status: 'matched' }
+      },
+      include: {
+      match: true
+      },
+      orderBy: {
+      match: {
+        createdAt: 'desc'
+      }
+      }
+    });
+    if (participant && participant.match) {
+      // We need to return the same matchInfo shape as in POST /join
+      const matchRecord = await prisma.match.findUnique({
+        where: { id: participant.match.id },
+        include: { participants: true, game: true }
+      });
+      if (!matchRecord) {
+        return res.json({ status: 'waiting' });
+      }
+      const other = matchRecord.participants.find(p => p.userId !== userId);
+      const matchInfo = {
+        matchId: matchRecord.id,
+        gameId: matchRecord.gameId,
+        puzzle: matchRecord.game.puzzle,
+        solution: matchRecord.game.solution,
+        difficulty: matchRecord.game.difficulty,
+        category: matchRecord.game.category,
+        opponent: other ? other.userId : null,
+      };
+      return res.json({ status: 'matched', match: matchInfo });
+    }
+    return res.json({ status: 'waiting' });
+  } catch (err) {
+    console.error('Error in /api/match/status:', err);
+    return res.status(500).json({ status: 'waiting' });
   }
-  return res.json({ status: 'waiting' });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────────────────
@@ -166,7 +204,10 @@ router.get('/', requireAuth, async (req, res) => {
 
       return {
         matchId: match.id,
+        createdAt: match.createdAt,
         status: match.status,
+        winnerId: match.winnerId || null,
+        timeTaken: match.timeTaken || null,
         opponent: opponentId,
         opponentName,
         // (Optionally send puzzle if you want to show a preview; otherwise omit)
@@ -214,10 +255,12 @@ router.get('/:matchId', requireAuth, async (req, res) => {
 
     // Build a response object that contains:
     //   • matchId
+    //   • createdAt
     //   • puzzle (string from game.puzzle)
     //   • participants: [ { userId, username, boardState } , ... ]
     const response = {
       matchId: match.id,
+      createdAt: match.createdAt,
       puzzle: match.game.puzzle,
       gameId: match.game.id,
       participants: match.participants.map(p => ({
@@ -388,6 +431,14 @@ router.patch('/:matchId/board', requireAuth, async (req, res) => {
 
     const winnerId = matchRecord.winnerId || null;
     const timeTaken = matchRecord.timeTaken || null;
+
+    // if winnerId is set, we remove update the status of the match to 'completed'
+    if (winnerId) {
+      await prisma.match.update({
+        where: { id: Number(matchId) },
+        data: { status: 'completed' }
+      });
+    }
 
     return res.json({
       participants: responseParticipants,
