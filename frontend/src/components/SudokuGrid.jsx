@@ -13,6 +13,8 @@ const SudokuGrid = ({
     originalPuzzle,
     disabled,
     onBoardChange,
+    boardState,
+    boardSize = '600px',
 }) => {
     // Each cell: { digit: number | null, candidates: number[], centerCands: number[], color: string | null }
     const emptyCell = { digit: null, candidates: [], centerCands: [], color: null };
@@ -35,6 +37,23 @@ const SudokuGrid = ({
     // Internal mode state: 'number' | 'candidate' | 'center' | 'color'
     const [mode, setMode] = useState('number');
 
+    // Track if there is a mistake (conflict) anywhere on the board
+    const [hasMistake, setHasMistake] = useState(false);
+
+    // Helper: Detect if there is any mistake/conflict on the board
+    const detectMistake = (boardArr) => {
+      for (let idx = 0; idx < 81; idx++) {
+        const cell = boardArr[idx];
+        const digit = cell.digit;
+        if (digit >= 1 && digit <= 9) {
+          if (hasConflict(idx, digit)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
     // 9‐color palette for “color” mode
     const palette = [
         '#1f77b4', // blue
@@ -47,13 +66,6 @@ const SudokuGrid = ({
         '#7f7f7f', // gray
         '#bcbd22'  // olive
     ];
-
-    // Notify parent of any board changes
-    useEffect(() => {
-        if (typeof onBoardChange === 'function') {
-            onBoardChange(board);
-        }
-    }, [board, onBoardChange]);
 
     // ────────────────────────────────────────────────
     // Undo/Redo stacks
@@ -70,28 +82,43 @@ const SudokuGrid = ({
     }));
 
     // ────────────────────────────────────────────────
-    // 1) Initialize board whenever initialPuzzle changes
+    // 1) Initialize board ONCE on mount
     // ────────────────────────────────────────────────
+    // Initialize board once when component mounts
+    const hasInitializedRef = useRef(false);
     useEffect(() => {
-        const newBoard = initialPuzzle.map((val, idx) => {
-            const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
-            if (isGiven) {
-                return { digit: originalPuzzle[idx], candidates: [], centerCands: [], color: null };
-            }
-            if (val >= 1 && val <= 9) {
-                // A previously filled‐in digit
-                return { digit: val, candidates: [], centerCands: [], color: null };
-            }
-            return { ...emptyCell };
-        });
-        setBoard(newBoard);
-        // Clear any existing selection
+        if (hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
+
+        if (Array.isArray(boardState) && boardState.length === 81) {
+            // Deep‐clone each cell object
+            setBoard(boardState.map(cell => ({
+                digit: cell.digit,
+                candidates: Array.isArray(cell.candidates) ? [...cell.candidates] : [],
+                centerCands: Array.isArray(cell.centerCands) ? [...cell.centerCands] : [],
+                color: cell.color || null,
+            })));
+        } else {
+            // Otherwise, build fresh board from initialPuzzle/originalPuzzle
+            const newBoard = initialPuzzle.map((val, idx) => {
+                const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
+                if (isGiven) {
+                    return { digit: originalPuzzle[idx], candidates: [], centerCands: [], color: null };
+                }
+                if (val >= 1 && val <= 9) {
+                    // A previously filled‐in digit
+                    return { digit: val, candidates: [], centerCands: [], color: null };
+                }
+                return { ...emptyCell };
+            });
+            setBoard(newBoard);
+        }
+
+        // Clear selection and reset states on first load
         setSelected(Array(81).fill(false));
-        // Reset clear signature
         setLastClearedSignature(null);
-        // Reset mode to 'number' when a new puzzle is loaded
         setMode('number');
-    }, [initialPuzzle, originalPuzzle]);
+    }, []);
 
     // ────────────────────────────────────────────────
     // 2) TRACK SHIFT/CTRL KEYS FOR TEMP MODE OVERRIDE
@@ -151,13 +178,11 @@ const SudokuGrid = ({
         const onGlobalKeyDown = (e) => {
             if (disabled) return;
 
-            // a) Ctrl+A / Cmd+A => select all non‐givens
+            // a) Ctrl+A / Cmd+A => select all cells
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
                 e.preventDefault();
                 e.stopPropagation();
-                setSelected(() =>
-                    originalPuzzle.map(val => (val >= 1 && val <= 9 ? false : true))
-                );
+                setSelected(() => Array(81).fill(true));
                 return;
             }
 
@@ -212,11 +237,7 @@ const SudokuGrid = ({
     // ────────────────────────────────────────────────
     const addSelect = (idx, additive) => {
         setSelected(old => {
-            const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
-            if (isGiven) {
-                // Never select a given cell
-                return old;
-            }
+            // Now allow selecting givens
             if (additive) {
                 const c = [...old];
                 c[idx] = !old[idx];
@@ -241,8 +262,7 @@ const SudokuGrid = ({
     const handleMouseEnter = (idx) => {
         if (!isMouseDown.current || disabled) return;
         setSelected(old => {
-            const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
-            if (isGiven) return old;
+            // Now allow selecting givens when dragging
             const c = [...old];
             c[idx] = true;
             return c;
@@ -257,62 +277,70 @@ const SudokuGrid = ({
         const prevBoard = cloneBoard(board);
         setUndoStack(us => [...us, prevBoard]);
         setRedoStack([]); // clear redo on new action
-        setBoard(prev =>
-            prev.map((cell, idx) => {
-                if (!selected[idx]) return cell;
-                const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
-                if (isGiven) return cell;
 
-                const newCell = { ...cell };
-                switch (appliedMode) {
-                    case 'number':
-                        if (value === 0) {
-                            newCell.digit = null;
-                        } else {
-                            newCell.digit = value;
-                            newCell.candidates = [];
-                            newCell.centerCands = [];
-                        }
-                        break;
+        // Build the updated board
+        const newBoard = board.map((cell, idx) => {
+            if (!selected[idx]) return cell;
+            const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
+            // If it's a given and not in color mode, do not alter
+            if (isGiven && appliedMode !== 'color') return cell;
+            const newCell = { ...cell };
 
-                    case 'candidate':
-                        if (value === 0) {
-                            newCell.candidates = [];
-                        } else {
-                            const has = newCell.candidates.includes(value);
-                            newCell.candidates = has
-                                ? newCell.candidates.filter(v => v !== value)
-                                : [...newCell.candidates, value];
-                            if (newCell.candidates.length) newCell.digit = null;
-                        }
-                        break;
+            switch (appliedMode) {
+                case 'number':
+                    if (value === 0) {
+                        newCell.digit = null;
+                    } else {
+                        newCell.digit = value;
+                        newCell.candidates = [];
+                        newCell.centerCands = [];
+                    }
+                    break;
+                case 'candidate':
+                    if (value === 0) {
+                        newCell.candidates = [];
+                    } else {
+                        const has = newCell.candidates.includes(value);
+                        newCell.candidates = has
+                            ? newCell.candidates.filter(v => v !== value)
+                            : [...newCell.candidates, value];
+                        if (newCell.candidates.length) newCell.digit = null;
+                    }
+                    break;
+                case 'center':
+                    if (value === 0) {
+                        newCell.centerCands = [];
+                    } else {
+                        const hasC = newCell.centerCands.includes(value);
+                        newCell.centerCands = hasC
+                            ? newCell.centerCands.filter(v => v !== value)
+                            : [...newCell.centerCands, value];
+                        if (newCell.centerCands.length) newCell.digit = null;
+                    }
+                    break;
+                case 'color':
+                    if (value === 0) {
+                        newCell.color = null;
+                    } else {
+                        newCell.color = palette[(value - 1) % palette.length];
+                    }
+                    break;
+                default:
+                    break;
+            }
+            return newCell;
+        });
 
-                    case 'center':
-                        if (value === 0) {
-                            newCell.centerCands = [];
-                        } else {
-                            const hasC = newCell.centerCands.includes(value);
-                            newCell.centerCands = hasC
-                                ? newCell.centerCands.filter(v => v !== value)
-                                : [...newCell.centerCands, value];
-                            if (newCell.centerCands.length) newCell.digit = null;
-                        }
-                        break;
+        setBoard(newBoard);
 
-                    case 'color':
-                        if (value === 0) {
-                            newCell.color = null;
-                        } else {
-                            newCell.color = palette[(value - 1) % palette.length];
-                        }
-                        break;
+        // Detect mistakes
+        const mistake = detectMistake(newBoard);
+        setHasMistake(mistake);
 
-                    default:
-                        break;
-                }
-                return newCell;
-            })
-        );
+        // Immediately notify parent of the new board and mistake flag
+        if (typeof onBoardChange === 'function') {
+          onBoardChange(newBoard, mistake);
+        }
     };
 
     const handleClear = () => {
@@ -322,13 +350,19 @@ const SudokuGrid = ({
         setRedoStack([]);
 
         const currentSig = selected.join(',');
-        // Check if any selected cell has data in the current layer
+        // Determine if any cell has data in the active layer (for non-givens) or color (for givens)
         let anyHasCurrentLayer = false;
         for (let idx = 0; idx < 81; idx++) {
             if (!selected[idx]) continue;
             const cell = board[idx];
             const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
-            if (isGiven) continue;
+            if (isGiven) {
+                if (cell.color !== null) {
+                    anyHasCurrentLayer = true;
+                    break;
+                }
+                continue;
+            }
             switch (mode) {
                 case 'number':
                     if (cell.digit !== null) anyHasCurrentLayer = true;
@@ -348,59 +382,68 @@ const SudokuGrid = ({
             if (anyHasCurrentLayer) break;
         }
 
-        // If none have data in the current layer, clear all layers from selected cells immediately
-        if (!anyHasCurrentLayer) {
-            setBoard(prev =>
-                prev.map((cell, idx) => {
-                    if (!selected[idx]) return cell;
-                    const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
-                    if (isGiven) return cell;
-                    return { ...emptyCell };
-                })
-            );
-            setLastClearedSignature(null);
-            return;
-        }
-
-        // Otherwise, proceed with existing one‐tap single‐layer clear and two‐tap full clear logic
+        // Check if this is a second press on the same selection signature
         const isSecondPress = currentSig === lastClearedSignature;
-        setBoard(prev =>
-            prev.map((cell, idx) => {
-                if (!selected[idx]) return cell;
-                const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
-                if (isGiven) return cell;
 
-                // On second press (same selection), clear all layers
+        // Build the newBoard array based on whether we clear a layer or full
+        const newBoard = board.map((cell, idx) => {
+            if (!selected[idx]) return cell;
+            const isGiven = originalPuzzle[idx] >= 1 && originalPuzzle[idx] <= 9;
+            if (isGiven) {
+                // For givens: only clear color, never remove digit or candidates
                 if (isSecondPress) {
-                    return { ...emptyCell };
+                    // Second press: remove color but keep given
+                    return { ...cell, color: null };
                 }
+                // Single press: only clear color if present
+                if (cell.color !== null) {
+                    return { ...cell, color: null };
+                }
+                return cell;
+            }
 
-                // Otherwise, clear only the active layer if it has content; else do nothing
-                const newCell = { ...cell };
-                switch (mode) {
-                    case 'number':
-                        if (newCell.digit !== null) newCell.digit = null;
-                        break;
-                    case 'candidate':
-                        if (newCell.candidates.length > 0) newCell.candidates = [];
-                        break;
-                    case 'center':
-                        if (newCell.centerCands.length > 0) newCell.centerCands = [];
-                        break;
-                    case 'color':
-                        if (newCell.color !== null) newCell.color = null;
-                        break;
-                    default:
-                        break;
-                }
-                return newCell;
-            })
-        );
-        // Update lastClearedSignature: if second press, reset; otherwise store current
+            // Non-given cells:
+            if (!anyHasCurrentLayer) {
+                // No data in current layer: full clear on these
+                return { ...emptyCell };
+            }
+            if (isSecondPress) {
+                // Second press: full clear
+                return { ...emptyCell };
+            }
+            // Otherwise, clear only active layer
+            const newCell = { ...cell };
+            switch (mode) {
+                case 'number':
+                    if (newCell.digit !== null) newCell.digit = null;
+                    break;
+                case 'candidate':
+                    if (newCell.candidates.length > 0) newCell.candidates = [];
+                    break;
+                case 'center':
+                    if (newCell.centerCands.length > 0) newCell.centerCands = [];
+                    break;
+                case 'color':
+                    if (newCell.color !== null) newCell.color = null;
+                    break;
+                default:
+                    break;
+            }
+            return newCell;
+        });
+
+        setBoard(newBoard);
         if (isSecondPress) {
             setLastClearedSignature(null);
         } else {
             setLastClearedSignature(currentSig);
+        }
+
+        // Detect mistakes
+        const mistake = detectMistake(newBoard);
+        setHasMistake(mistake);
+        if (typeof onBoardChange === 'function') {
+          onBoardChange(newBoard, mistake);
         }
     };
 
@@ -414,6 +457,11 @@ const SudokuGrid = ({
         setUndoStack(prevUndo);
         setRedoStack(rs => [...rs, cloneBoard(board)]);
         setBoard(last);
+        const mistakeUndo = detectMistake(last);
+        setHasMistake(mistakeUndo);
+        if (typeof onBoardChange === 'function') {
+          onBoardChange(last, mistakeUndo);
+        }
     };
     const redo = () => {
         if (redoStack.length === 0) return;
@@ -422,6 +470,11 @@ const SudokuGrid = ({
         setRedoStack(prevRedo);
         setUndoStack(us => [...us, cloneBoard(board)]);
         setBoard(next);
+        const mistakeRedo = detectMistake(next);
+        setHasMistake(mistakeRedo);
+        if (typeof onBoardChange === 'function') {
+          onBoardChange(next, mistakeRedo);
+        }
     };
 
     // ────────────────────────────────────────────────
@@ -489,111 +542,115 @@ const SudokuGrid = ({
     // 7) RENDER
     // ────────────────────────────────────────────────
     return (
-        <div className="flex">
-            {/* ======= SUDOKU GRID ======= */}
-            <div
-                className={`grid grid-cols-9 grid-rows-9 select-none border-4 ${disabled ? 'opacity-50' : ''}`}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
-            >
-                {board.map((cell, index) => {
-                    const row = Math.floor(index / 9), col = index % 9;
+        <div className="flex items-center justify-center">
+            {/* Container to control board dimensions */}
+            <div style={{ width: boardSize, height: boardSize }} className="flex flex-row">
+                {/* ======= SUDOKU GRID ======= */}
+                <div
+                    className={`grid grid-cols-9 grid-rows-9 select-none border-4 ${disabled ? 'opacity-50' : ''}`}
+                    style={{ width: '100%', height: '100%' }}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                >
+                    {board.map((cell, index) => {
+                        const row = Math.floor(index / 9), col = index % 9;
 
-                    // 3×3 thicker boundaries
-                    let borderClasses = '';
-                    if (col === 2 || col === 5) borderClasses += ' border-r-4';
-                    else if (col !== 8) borderClasses += ' border-r';
-                    if (row === 2 || row === 5) borderClasses += ' border-b-4';
-                    else if (row !== 8) borderClasses += ' border-b';
+                        // 3×3 thicker boundaries
+                        let borderClasses = '';
+                        if (col === 2 || col === 5) borderClasses += ' border-r-4';
+                        else if (col !== 8) borderClasses += ' border-r';
+                        if (row === 2 || row === 5) borderClasses += ' border-b-4';
+                        else if (row !== 8) borderClasses += ' border-b';
 
-                    const isGiven = originalPuzzle[index] >= 1 && originalPuzzle[index] <= 9;
-                    const displayDigit = isGiven
-                        ? originalPuzzle[index]
-                        : cell.digit;
+                        const isGiven = originalPuzzle[index] >= 1 && originalPuzzle[index] <= 9;
+                        const displayDigit = isGiven
+                            ? originalPuzzle[index]
+                            : cell.digit;
 
-                    // Always white background
-                    const bgClass = 'bg-white';
+                        // Always white background
+                        const bgClass = 'bg-white';
 
-                    // For center candidates, precompute sorted array
-                    const sortedCenterCands = cell.centerCands.slice().sort((a, b) => a - b);
+                        // For center candidates, precompute sorted array
+                        const sortedCenterCands = cell.centerCands.slice().sort((a, b) => a - b);
 
-                    return (
-                        <div
-                            key={index}
-                            className={`relative w-18 h-18 ${bgClass} ${borderClasses}`}
-                            onMouseDown={(e) => handleMouseDown(index, e)}
-                            onMouseEnter={() => handleMouseEnter(index)}
-                            onContextMenu={(e) => e.preventDefault()}
-                        >
-                            {/* 1) Color background */}
-                            {!isGiven && cell.color && (
-                                <div
-                                    className="absolute inset-0 opacity-50"
-                                    style={{ backgroundColor: cell.color }}
-                                />
-                            )}
+                        return (
+                            <div
+                                key={index}
+                                className={`relative w-full h-full ${bgClass} ${borderClasses} hover:bg-blue-100 cursor-pointer`}
+                                onMouseDown={(e) => handleMouseDown(index, e)}
+                                onMouseEnter={() => handleMouseEnter(index)}
+                                onContextMenu={(e) => e.preventDefault()}
+                            >
+                                {/* 1) Color background */}
+                                {cell.color && (
+                                    <div
+                                        className="absolute inset-0 opacity-50"
+                                        style={{ backgroundColor: cell.color }}
+                                    />
+                                )}
 
-                            {/* 2) Selection border */}
-                            {!isGiven && selected[index] && (
-                                <div
-                                    className={`absolute inset-0 pointer-events-none ${getSelectionClasses(index)}`}
-                                />
-                            )}
+                                {/* 2) Selection border */}
+                                {selected[index] && (
+                                    <div
+                                        className={`absolute inset-0 pointer-events-none ${getSelectionClasses(index)}`}
+                                    />
+                                )}
 
-                            {/* 3) Digit layer */}
-                            {displayDigit && (
-                                <div
-                                    className={`absolute inset-0 flex items-center justify-center text-3xl font-bold ${hasConflict(index, displayDigit)
-                                        ? 'text-red-600'
-                                        : isGiven
-                                            ? 'text-gray-900'
-                                            : 'text-blue-600'
-                                        } z-10`}
-                                >
-                                    {displayDigit}
-                                </div>
-                            )}
+                                {/* 3) Digit layer */}
+                                {displayDigit && (
+                                    <div
+                                        className={`absolute inset-0 flex items-center justify-center text-3xl font-bold ${hasConflict(index, displayDigit)
+                                            ? 'text-red-600'
+                                            : isGiven
+                                                ? 'text-gray-900'
+                                                : 'text-blue-600'
+                                            } z-10`}
+                                    >
+                                        {displayDigit}
+                                    </div>
+                                )}
 
-                            {/* 4) Small candidate grid */}
-                            {!displayDigit && cell.candidates.length > 0 && (
-                                <div className="absolute top-0 left-0 w-full h-full p-0.5 grid grid-cols-3 grid-rows-3 text-[12px] text-black z-5">
-                                    {Array.from({ length: 9 }).map((_, i) => {
-                                        const num = i + 1;
-                                        const show = cell.candidates.includes(num);
-                                        const conflict = show && hasConflict(index, num);
-                                        return (
-                                            <div
-                                                key={i}
-                                                className={`flex items-center justify-center ${show ? '' : 'invisible'
-                                                    }${conflict ? ' text-red-600' : ''}`}
-                                            >
-                                                {num}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
+                                {/* 4) Small candidate grid */}
+                                {!displayDigit && cell.candidates.length > 0 && (
+                                    <div className="absolute top-0 left-0 w-full h-full p-0.5 grid grid-cols-3 grid-rows-3 text-[12px] text-black z-5">
+                                        {Array.from({ length: 9 }).map((_, i) => {
+                                            const num = i + 1;
+                                            const show = cell.candidates.includes(num);
+                                            const conflict = show && hasConflict(index, num);
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className={`flex items-center justify-center ${show ? '' : 'invisible'
+                                                        }${conflict ? ' text-red-600' : ''}`}
+                                                >
+                                                    {num}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
 
-                            {/* 5) Center candidates (if any) */}
-                            {!displayDigit && cell.centerCands.length > 0 && (
-                                <div className="absolute inset-0 flex flex-wrap items-center justify-center text-m text-black z-5 font-bold opacity-60 p-1">
-                                    {sortedCenterCands.map((num, i) => {
-                                        const conflict = hasConflict(index, num);
-                                        return (
-                                            <span
-                                                key={i}
-                                                className={conflict ? 'text-red-600' : undefined}
-                                                style={{ margin: '0 2px' }}
-                                            >
-                                                {num}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
+                                {/* 5) Center candidates (if any) */}
+                                {!displayDigit && cell.centerCands.length > 0 && (
+                                    <div className="absolute inset-0 flex flex-wrap items-center justify-center text-m text-black z-5 font-bold opacity-60 p-1">
+                                        {sortedCenterCands.map((num, i) => {
+                                            const conflict = hasConflict(index, num);
+                                            return (
+                                                <span
+                                                    key={i}
+                                                    className={conflict ? 'text-red-600' : undefined}
+                                                    style={{ margin: '0 2px' }}
+                                                >
+                                                    {num}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             {/* ======= RIGHT‐HAND PANEL ======= */}
@@ -652,8 +709,8 @@ const SudokuGrid = ({
                             onClick={undo}
                             disabled={disabled || undoStack.length === 0}
                             className={`w-1/2 mx-1 h-10 text-4xl border rounded-lg flex items-center justify-center transition-colors ${disabled || undoStack.length === 0
-                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                    : 'bg-white text-black hover:bg-black hover:text-white'
+                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                : 'bg-white text-black hover:bg-black hover:text-white'
                                 }`}
                             title="Undo"
                         >
@@ -663,8 +720,8 @@ const SudokuGrid = ({
                             onClick={redo}
                             disabled={disabled || redoStack.length === 0}
                             className={`w-1/2 mx-1 h-10 text-4xl border rounded-lg flex items-center justify-center transition-colors ${disabled || redoStack.length === 0
-                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                    : 'bg-white text-black hover:bg-black hover:text-white'
+                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                : 'bg-white text-black hover:bg-black hover:text-white'
                                 }`}
                             title="Redo"
                         >

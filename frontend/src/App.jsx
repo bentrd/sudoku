@@ -8,6 +8,8 @@ import ProtectedRoute from './components/authentication/ProtectedRoute';
 import DatabasePage from './pages/DatabasePage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import FindOpponentPage from './components/match/FindOpponentButton';
+import VersusPage from './pages/VersusPage';
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
           <Route path="/db" element={<DatabasePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/versus" element={<VersusPage />} />
+          <Route path="/versus/:matchId" element={<VersusPage />} />
         </Route>
 
         {/* Fallback for any unmatched URL */}

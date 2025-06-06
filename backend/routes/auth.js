@@ -4,49 +4,7 @@ const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcrypt');
-
-const { TextEncoder } = require('util');
-const { cp } = require('fs');
-
-const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY || 'test_secret_key';
-const jwtSecret = new TextEncoder().encode(JWT_SECRET_KEY);
-
-/**
- * Verifies a JWT token using jose.jwtVerify
- */
-async function verifyToken(token, { returnPayload = false } = {}) {
-    try {
-        const { jwtVerify } = await import('jose');
-        const { payload } = await jwtVerify(token, jwtSecret);
-        return returnPayload ? payload : true;
-    } catch (err) {
-        return false;
-    }
-}
-
-/**
- * Generates a refresh token containing the provided data.
- * Expires in 30 days.
- */
-async function generateRefreshToken(data) {
-    const { SignJWT } = await import('jose');
-    return await new SignJWT({ data })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setExpirationTime('30d')
-        .sign(jwtSecret);
-}
-
-/**
- * Generates an access token containing the provided refresh token string.
- * Expires in 15 minutes.
- */
-async function generateAccessToken(refreshToken) {
-    const { SignJWT } = await import('jose');
-    return await new SignJWT({ data: refreshToken })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setExpirationTime('15m')
-        .sign(jwtSecret);
-}
+const { generateAccessToken, generateRefreshToken, verifyToken, requireAuth } = require('../utils/AuthUtils');
 
 const prisma = new PrismaClient();
 router.use(cookieParser());
@@ -158,17 +116,31 @@ router.post('/signup', async (req, res) => {
 });
 
 // Change password for the current user
-router.post('/change-password', async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        return res.status(401).json({ message: 'Unauthorized' });
+router.post('/change-password', requireAuth, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Current password and new password are required' });
     }
-    const token = authHeader.split(' ')[1];
-    console.log('Access token:', token);
-    const accessPayload = await verifyToken(token, { returnPayload: true });
-    if (!accessPayload) {
-        return res.status(401).json({ message: 'Unauthorized' });
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        const passwordMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Invalid current password' });
+        }
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await prisma.user.update({
+            where: { id: req.userId },
+            data: { password: hashedPassword }
+        });
+        res.json({ message: 'Password changed successfully' });
+    } catch (err) {
+        console.error('Error changing password:', err);
+        res.status(500).json({ message: 'Internal server error' });
     }
+
     const refreshToken = accessPayload.data;
     const refreshPayload = await verifyToken(refreshToken, { returnPayload: true });
     console.log('Refresh token:', refreshToken);
@@ -200,34 +172,22 @@ router.post('/change-password', async (req, res) => {
     }
 });
 
-router.post('/update-profile', async (req, res) => {    
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        return res.status(401).json({ message: 'Unauthorized' });
+router.post('/update-profile', requireAuth, async (req, res) => {
+    const { username, email } = req.body;
+    if (!username || !email) {
+        return res.status(400).json({ message: 'Username and email are required' });
     }
-    const token = authHeader.split(' ')[1];
-    const accessPayload = await verifyToken(token, { returnPayload: true });
-    if (!accessPayload) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-    const refreshToken = accessPayload.data;
-    const refreshPayload = await verifyToken(refreshToken, { returnPayload: true });
-    if (!refreshPayload) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-    const userId = refreshPayload.data;
-
     try {
-        const { username, email } = req.body;
-        if (!username || !email) {
-            return res.status(400).json({ message: 'Username and email are required' });
+        const user = await prisma.user.findUnique({ where: { id: req.userId } });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
         // Check if the username or email already exists for another user
         const existingUser = await prisma.user.findFirst({
             where: {
                 OR: [
-                    { username, id: { not: userId } },
-                    { email, id: { not: userId } }
+                    { username, id: { not: user.id } },
+                    { email, id: { not: user.id } }
                 ]
             }
         });
@@ -235,7 +195,7 @@ router.post('/update-profile', async (req, res) => {
             return res.status(409).json({ message: 'Username or email already in use' });
         }
         const updatedUser = await prisma.user.update({
-            where: { id: userId },
+            where: { id: user.id },
             data: { username, email },
             select: { id: true, username: true, email: true }
         });

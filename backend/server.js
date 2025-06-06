@@ -15,6 +15,8 @@ const sudokuRoutes = require('./routes/sudoku');
 app.use('/api/sudoku', sudokuRoutes);
 const authRoutes = require('./routes/auth');
 app.use('/api/auth', authRoutes);
+const matchRoutes = require('./routes/match');
+app.use('/api/match', matchRoutes);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {

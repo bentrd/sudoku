@@ -7,35 +7,51 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-model Game {
-  id          Int      @id @default(autoincrement())
-  createdAt   DateTime @default(now())
-  // store the puzzle string and solution directly
-  puzzle      String
-  solution    String
-  difficulty  Int
-  category    String
-  status      String   @default("in_progress") // in_progress, completed, failed
-  // participants in this game (many-to-many via GameUser)
-  participants GameUser[]
-}
-
 model User {
-  id         Int      @id @default(autoincrement())
-  createdAt  DateTime @default(now())
-  username   String   @unique
-  email      String   @unique
-  password   String
-  // participations in games
-  participations GameUser[]
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  username  String   @unique
+  email     String   @unique
+  password  String
+
+  // All matches this user is a participant in
+  participants MatchParticipant[]
 }
 
-/// Join table for the many-to-many relation between Game and User
-model GameUser {
-  game   Game @relation(fields: [gameId], references: [id])
-  gameId Int
-  user   User @relation(fields: [userId], references: [id])
-  userId Int
+model Game {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
 
-  @@id([gameId, userId])
+  puzzle     String
+  solution   String
+  difficulty Int
+  category   String
+
+  matches Match[]
+}
+
+model Match {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  // Which puzzle is being played
+  game   Game   @relation(fields: [gameId], references: [id])
+  gameId Int
+  status String @default("pending")
+
+  winnerId  Int?
+  loserId   Int?
+  timeTaken Int? @default(0)
+
+  participants MatchParticipant[]
+}
+
+model MatchParticipant {
+  id      Int   @id @default(autoincrement())
+  match   Match @relation(fields: [matchId], references: [id])
+  matchId Int
+
+  user       User @relation(fields: [userId], references: [id])
+  userId     Int
+  boardState Json @default("[]")
 }

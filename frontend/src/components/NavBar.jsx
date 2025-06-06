@@ -66,6 +66,9 @@ const NavBar = () => {
                             <Link to="/solver" className={`text-gray-600 hover:text-gray-800 font-medium ${activeLink === '/solver' ? activeLinkStyle : ''}`} onClick={() => setActiveLink('/solver')}>
                                 Solver
                             </Link>
+                            <Link to="/versus" className={`text-gray-600 hover:text-gray-800 font-medium ${activeLink === '/versus' ? activeLinkStyle : ''}`} onClick={() => setActiveLink('/versus')}>
+                                Versus
+                            </Link>
                         </>
                     )}
                 </div>
