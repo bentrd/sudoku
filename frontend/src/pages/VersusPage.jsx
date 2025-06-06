@@ -218,14 +218,14 @@ const VersusPage = () => {
   if (!matchId) {
     if (listLoading) {
       return (
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen min-w-screen flex items-center justify-center">
           <p className="text-lg">Loading your matches…</p>
         </div>
       );
     }
 
     return (
-      <div className="min-h-screen flex flex-col items-center p-4">
+      <div className="min-h-screen min-w-screen flex flex-col items-center p-4">
         <h1 className="text-3xl font-bold mb-6">Your Matches</h1>
         <FindOpponentButton className="mb-4" />
         <MatchList matchList={matchList} />
