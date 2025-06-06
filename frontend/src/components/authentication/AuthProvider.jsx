@@ -13,7 +13,7 @@ const AuthProvider = ({ children }) => {
   const fetchMe = async () => {
     try {
       // First, try to get /me using the current accessToken (in header)
-      const response = await axios.get('http://localhost:3001/api/auth/me', {
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/auth/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
         withCredentials: true, // <— ensure cookie is sent if needed
       });
@@ -24,7 +24,7 @@ const AuthProvider = ({ children }) => {
       if (err.response?.status === 401) {
         try {
           const refreshResp = await axios.get(
-            'http://localhost:3001/api/auth/refreshToken',
+            `${import.meta.env.VITE_API_BASE_URL}/api/auth/refreshToken`,
             {
               withCredentials: true, // <— crucial: send the HTTP‐only cookie
             }
@@ -32,7 +32,7 @@ const AuthProvider = ({ children }) => {
           const newAccess = refreshResp.data.accessToken;
           setAccessToken(newAccess);
           // Retry /me now that we have a new accessToken
-          const retry = await axios.get('http://localhost:3001/api/auth/me', {
+          const retry = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/auth/me`, {
             headers: { Authorization: `Bearer ${newAccess}` },
             withCredentials: true,
           });
@@ -69,7 +69,7 @@ const AuthProvider = ({ children }) => {
   const login = async ({ username, password }) => {
     try {
       const resp = await axios.post(
-        'http://localhost:3001/api/auth/login',
+        `${import.meta.env.VITE_API_BASE_URL}/api/auth/login`,
         { username, password },
         { withCredentials: true }
       );
@@ -86,7 +86,7 @@ const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await axios.post(
-        'http://localhost:3001/api/auth/signout',
+        `${import.meta.env.VITE_API_BASE_URL}/api/auth/signout`,
         {},
         { withCredentials: true }
       );
@@ -101,7 +101,7 @@ const AuthProvider = ({ children }) => {
 
   const signup = async ({ username, email, password }) => {
     try {
-      const resp = await axios.post('http://localhost:3001/api/auth/signup', {
+      const resp = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/signup`, {
         username,
         email,
         password,

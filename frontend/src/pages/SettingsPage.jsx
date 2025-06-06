@@ -45,7 +45,7 @@ const SettingsPage = () => {
         try {
             // Example API call to update profile; adjust URL as needed
             await axios.post(
-                'http://localhost:3001/api/auth/update-profile',
+                `${import.meta.env.VITE_API_BASE_URL}/api/auth/update-profile`,
                 {
                     username: formData.username,
                     email: formData.email,
@@ -71,7 +71,7 @@ const SettingsPage = () => {
 
         try {
             await axios.post(
-                'http://localhost:3001/api/auth/change-password',
+                `${import.meta.env.VITE_API_BASE_URL}/api/auth/change-password`,
                 {
                     currentPassword: formData.currentPassword,
                     newPassword: formData.newPassword,

@@ -46,7 +46,7 @@ const VersusPage = () => {
     setMyBoardState(boardState);
     axios
       .patch(
-        `http://localhost:3001/api/match/${matchId}/board`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/match/${matchId}/board`,
         { boardState },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       )
@@ -85,7 +85,7 @@ const VersusPage = () => {
     if (!matchId) {
       const fetchMatches = async () => {
         try {
-          const resp = await axios.get('http://localhost:3001/api/match', {
+          const resp = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/match`, {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
           setMatchList(resp.data.matches || []);
@@ -103,7 +103,7 @@ const VersusPage = () => {
     const fetchMatch = async () => {
       try {
         const resp = await axios.get(
-          `http://localhost:3001/api/match/${matchId}`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/match/${matchId}`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           }
@@ -154,7 +154,7 @@ const VersusPage = () => {
       if (latestBoard) {
         axios
           .patch(
-            `http://localhost:3001/api/match/${matchId}/board`,
+            `${import.meta.env.VITE_API_BASE_URL}/api/match/${matchId}/board`,
             { boardState: latestBoard },
             { headers: { Authorization: `Bearer ${accessToken}` } }
           )

@@ -10,7 +10,7 @@ const DatabasePage = () => {
   // Fetch all puzzles from the database
   const fetchPuzzles = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/api/sudoku/games');
+      const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/sudoku/games`);
       setPuzzles(res.data);
     } catch (err) {
       console.error('Failed to load puzzles:', err);
@@ -38,7 +38,7 @@ const DatabasePage = () => {
       await Promise.all(
         Array.from({ length: count }, () =>
           axios
-            .get('http://localhost:3001/api/sudoku/generate', {
+            .get(`${import.meta.env.VITE_API_BASE_URL}/api/sudoku/generate`, {
               params: { difficulty: 'random', nonce: Date.now() },
             })
             .catch((err) => console.error('Generation error:', err))

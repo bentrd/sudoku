@@ -51,8 +51,8 @@ const HomePage = () => {
             }
 
             const url = puzzleParam
-                ? `http://localhost:3001/api/sudoku/generate?puzzle=${puzzleParam}`
-                : `http://localhost:3001/api/sudoku/generate?difficulty=${difficulty}`;
+                ? `${import.meta.env.VITE_API_BASE_URL}/api/sudoku/generate?puzzle=${puzzleParam}`
+                : `${import.meta.env.VITE_API_BASE_URL}/api/sudoku/generate?difficulty=${difficulty}`;
 
             const res = await axios.get(url);
             // Server returns:

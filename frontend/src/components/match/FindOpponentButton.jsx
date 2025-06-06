@@ -17,7 +17,7 @@ const FindOpponentButton = ({ className }) => {
         if (status === 'waiting') {
             intervalId = setInterval(async () => {
                 try {
-                    const resp = await axios.get('http://localhost:3001/api/match/status', {
+                    const resp = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/match/status`, {
                         headers: { Authorization: `Bearer ${accessToken}` }
                     });
                     if (resp.data.status === 'matched') {
@@ -47,7 +47,7 @@ const FindOpponentButton = ({ className }) => {
         setStatus('waiting');
         try {
             const resp = await axios.post(
-                'http://localhost:3001/api/match/join',
+                `${import.meta.env.VITE_API_BASE_URL}/api/match/join`,
                 {},
                 { headers: { Authorization: `Bearer ${accessToken}` } }
             );

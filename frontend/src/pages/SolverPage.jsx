@@ -180,7 +180,7 @@ const SolverPage = () => {
 
   const getPuzzleFromDB = async (puzzleId) => {
     try {
-      const response = await axios.get(`http://localhost:3001/api/sudoku/generate?puzzle=${puzzleId}`);
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/sudoku/generate?puzzle=${puzzleId}`);
       if (response.data && response.data.puzzle) {
         let arr = response.data.puzzle;
         console.log('Loaded puzzle from DB:', arr);
@@ -198,7 +198,7 @@ const SolverPage = () => {
   const solvePuzzle = async (arr) => {
     console.log('Solving puzzle:', arr);
     try {
-      const response = await axios.post('http://localhost:3001/api/sudoku/solve', { puzzle: arr });
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/sudoku/solve`, { puzzle: arr });
       if (response.data) {
         setTechniques(response.data.techniques);
         setDifficulty(response.data.difficulty);

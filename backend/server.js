@@ -11,6 +11,13 @@ app.use((req, res, next) => {
   next();
 });
 
+const defaultRoute = {
+  GET: (req, res) => {
+    res.json({ message: 'Welcome to the Sudoku API' });
+  },
+};
+app.get('/', defaultRoute.GET);
+
 const sudokuRoutes = require('./routes/sudoku');
 app.use('/api/sudoku', sudokuRoutes);
 const authRoutes = require('./routes/auth');
@@ -20,5 +27,5 @@ app.use('/api/match', matchRoutes);
 
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`✅ Server running on port ${PORT}`);
 });
