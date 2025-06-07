@@ -1,4 +1,5 @@
 import React from 'react';
+import PlayerNameTag from './PlayerNameTag';
 
 // A simple progress bar (0..1) with configurable color
 export const ProgressBar = ({ progress = 0, color }) => {
@@ -16,9 +17,9 @@ export const ProgressBar = ({ progress = 0, color }) => {
 };
 
 // Renders a label + horizontal progress bar beneath it
-const PlayerProgress = ({ name, progress, color }) => (
+const PlayerProgress = ({ name, country, progress, color }) => (
   <div className="flex flex-col items-start">
-    <span className="text-lg font-medium text-gray-800">{name}</span>
+    <PlayerNameTag name={name} country={country} />
     <div className="w-full mt-1">
       <ProgressBar progress={progress} color={color} />
     </div>

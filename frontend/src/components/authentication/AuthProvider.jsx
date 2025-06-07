@@ -99,12 +99,13 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async ({ username, email, password }) => {
+  const signup = async ({ username, email, password, country }) => {
     try {
       const resp = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/auth/signup`, {
         username,
         email,
         password,
+        country,
       });
       return resp.status === 201;
     } catch (err) {

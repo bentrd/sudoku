@@ -61,7 +61,7 @@ const LoginForm = ({ onSwitchToSignup }) => {
                             onChange={(e) => setEmailOrUsername(e.target.value)}
                             placeholder="you@example.com"
                             required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                     </div>
 
@@ -79,13 +79,13 @@ const LoginForm = ({ onSwitchToSignup }) => {
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••"
                             required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                     </div>
 
                     <button
                         type="submit"
-                        className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors"
+                        className="w-full px-4 py-3 mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full transition-colors"
                     >
                         Login
                     </button>

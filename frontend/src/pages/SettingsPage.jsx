@@ -1,6 +1,7 @@
 // frontend/src/pages/SettingsPage.jsx
 import React, { useState, useEffect } from 'react';
 import useAuth from '../components/authentication/useAuth';
+import CountrySelector from '../components/CountrySelector';
 import axios from 'axios';
 
 const SettingsPage = () => {
@@ -9,6 +10,7 @@ const SettingsPage = () => {
     const [formData, setFormData] = useState({
         username: '',
         email: '',
+        country: '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -22,6 +24,7 @@ const SettingsPage = () => {
                 ...f,
                 username: user.username || '',
                 email: user.email || '',
+                country: user.country || '',
             }));
         }
     }, [loading, user]);
@@ -49,6 +52,7 @@ const SettingsPage = () => {
                 {
                     username: formData.username,
                     email: formData.email,
+                    country: formData.country,
                 },
                 {
                     headers: { Authorization: `Bearer ${accessToken}` },
@@ -174,6 +178,16 @@ const SettingsPage = () => {
                                     value={formData.email}
                                     onChange={handleInputChange}
                                     className="mt-1 block w-full border border-gray-300 rounded-full py-2 px-3 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            {/* Country selector */}
+                            <div>
+                                <label htmlFor="country" className="block text-sm font-medium text-gray-700">
+                                    Country
+                                </label>
+                                <CountrySelector
+                                    value={formData.country}
+                                    onChange={(code) => setFormData(f => ({ ...f, country: code }))}
                                 />
                             </div>
                             <div className="flex justify-end">

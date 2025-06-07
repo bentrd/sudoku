@@ -2,17 +2,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useAuth from './useAuth';
+import CountrySelector from '../CountrySelector';
 
 const SignupForm = ({ onSwitchToLogin }) => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [country, setCountry] = useState('');
   const [statusMsg, setStatusMsg] = useState(null); // { type: 'error' | 'success', text: string }
   const { signup } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const fromPath = location.state?.from?.pathname || '/';
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -23,7 +22,9 @@ const SignupForm = ({ onSwitchToLogin }) => {
       return;
     }
 
-    const success = await signup({ username, email, password });
+    console.log('Signing up with:', { username, email, password, country });
+
+    const success = await signup({ username, email, password, country });
     if (success) {
       setStatusMsg({ type: 'success', text: 'Account created! Redirecting…' });
       setTimeout(() => {
@@ -67,7 +68,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Your username"
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -85,7 +86,18 @@ const SignupForm = ({ onSwitchToLogin }) => {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="country" className="block text-sm font-medium text-gray-700 mb-2">
+              Country
+            </label>
+            <CountrySelector
+              value={country}
+              onChange={(code) => setCountry(code)}
+              required
             />
           </div>
 
@@ -103,7 +115,7 @@ const SignupForm = ({ onSwitchToLogin }) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -121,13 +133,13 @@ const SignupForm = ({ onSwitchToLogin }) => {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+            className="w-full px-4 py-3 mt-6 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full transition-colors"
           >
             Sign Up
           </button>

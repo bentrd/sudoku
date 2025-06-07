@@ -198,6 +198,9 @@ router.get('/', requireAuth, async (req, res) => {
       const opponentName = otherParticipant && otherParticipant.user
         ? otherParticipant.user.username
         : null;
+      const opponentCountry = otherParticipant && otherParticipant.user
+        ? otherParticipant.user.country
+        : null;
 
       console.log(match.elo);
 
@@ -209,6 +212,7 @@ router.get('/', requireAuth, async (req, res) => {
         timeTaken: match.timeTaken || null,
         opponent: opponentId,
         opponentName,
+        opponentCountry,
         winnerEloBefore: match.winnerEloBefore || null,
         winnerEloAfter: match.winnerEloAfter || null,
         loserEloBefore: match.loserEloBefore || null,
@@ -267,6 +271,7 @@ router.get('/:matchId', requireAuth, async (req, res) => {
       participants: match.participants.map(p => ({
         userId: p.userId,
         username: p.user.username,
+        country: p.user.country,
         boardState: p.boardState // this is a JSON array or “[]” if never edited
       })),
       winnerId: match.winnerId || null,

@@ -3,6 +3,7 @@ import useAuth from '../authentication/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { formatDuration } from './utils';
 import axios from 'axios';
+import PlayerNameTag from './PlayerNameTag';
 
 const MatchList = ({ matchList }) => {
   const { accessToken, user } = useAuth();
@@ -247,7 +248,10 @@ const MatchList = ({ matchList }) => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         <div className="flex items-center gap-2">
                           <span className='text-xs'>vs</span>
-                          <span className="font-semibold truncate w-24">{m.opponentName || m.opponent}</span>
+                          <PlayerNameTag
+                            name={m.opponentName || `User ${m.opponent}`}
+                            country={m.opponentCountry}
+                          />
                         </div>
                       </td>
                       {/* Elo cell */}

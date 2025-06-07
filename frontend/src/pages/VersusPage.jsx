@@ -262,16 +262,17 @@ const VersusPage = () => {
     ? matchData.winnerEloAfter
     : matchData.loserEloAfter;
   const currentUserId = user.id;
-  let playerAName = `You (${currentUserId})`;
-  let playerBName = `Opponent`;
+  let playerAName, playerBName, playerACountry, playerBCountry;
   if (matchData?.participants) {
     const me = matchData.participants.find((p) => p.userId === currentUserId);
     const opp = matchData.participants.find((p) => p.userId !== currentUserId);
     if (me) {
-      playerAName = me.username || `You (${me.userId})`;
+      playerAName = me.username;
+      playerACountry = me.country;
     }
     if (opp) {
-      playerBName = opp.username || `Opponent (${opp.userId})`;
+      playerBName = opp.username;
+      playerBCountry = opp.country;
     }
   }
 
@@ -296,6 +297,7 @@ const VersusPage = () => {
               <div className="w-full">
                 <PlayerProgress
                   name={playerAName}
+                  country={playerACountry}
                   progress={myProgress}
                   color={myProgressColor}
                 />
@@ -315,6 +317,7 @@ const VersusPage = () => {
               >
                 <PlayerProgress
                   name={playerBName}
+                  country={playerBCountry}
                   progress={showOpponent ? opponentProgress : 1}
                   color={showOpponent ? oppProgressColor : 'gray'}
                 />
