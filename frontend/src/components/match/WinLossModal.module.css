@@ -1,0 +1,81 @@
+@keyframes pulseFade {
+    0% {
+        color: var(--pulse-color);
+    }
+
+    50% {
+        color: var(--pulse-color);
+    }
+
+    100% {
+        color: black;
+    }
+}
+
+.eloAnimation {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.eloDigit {
+    position: relative;
+    width: 1.2rem;
+    height: 2rem;
+    overflow: hidden;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+/* Old digit, sliding up */
+.eloOld {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.5s ease-in-out;
+    transform: translateY(0);
+}
+
+/* New digit, sliding in */
+.eloNew {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+        transform 0.5s ease-in-out,
+        color 0.5s ease-in-out;
+    /* start below the slot */
+    transform: translateY(100%);
+    color: var(--pulse-color, black);
+    animation: pulseFade 2s forwards;
+    animation-delay: 800ms;
+    /* delay to sync with the old digit */
+}
+
+.greenPulse {
+    --pulse-color: var(--color-green-600);
+}
+
+.redPulse {
+    --pulse-color: var(--color-red-600);
+}
+
+/* Classes to trigger the slide */
+.slideUp {
+    transform: translateY(-100%);
+}
+
+.slideIn {
+    transform: translateY(0);
+}

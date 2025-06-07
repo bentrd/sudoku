@@ -1,7 +1,7 @@
 // frontend/src/pages/ProfilePage.jsx
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAuth  from '../components/authentication/useAuth';
+import useAuth from '../components/authentication/useAuth';
 
 const ProfilePage = () => {
   const { user, loading, logout } = useAuth();
@@ -42,6 +42,12 @@ const ProfilePage = () => {
               Email
             </label>
             <p className="mt-1 text-lg text-gray-700">{user.email}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-600">
+              ELO Rating
+            </label>
+            <p className="mt-1 text-lg text-gray-700">{user.elo}</p>
           </div>
         </div>
       </div>

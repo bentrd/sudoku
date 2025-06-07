@@ -4,10 +4,9 @@ const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const { requireAuth } = require('../utils/AuthUtils');
-const { time } = require('console');
+const { updateEloRatings } = require('../utils/ELO');
 
 const prisma = new PrismaClient();
-
 
 // POST /api/match/join
 // Request headers: Authorization: Bearer <accessToken>
@@ -43,7 +42,7 @@ router.post('/join', requireAuth, async (req, res) => {
       const { Worker } = require('worker_threads');
       const worker = new Worker(
         require('path').resolve(__dirname, '../workers/generate.js'),
-        { workerData: { difficulty: 'Easy', puzzle: '' } }
+        { workerData: { difficulty: 'Beginner', puzzle: '' } }
       );
 
       worker.once('message', async (data) => {
@@ -150,6 +149,10 @@ router.get('/status', requireAuth, async (req, res) => {
         difficulty: matchRecord.game.difficulty,
         category: matchRecord.game.category,
         opponent: other ? other.userId : null,
+        winnerEloBefore: matchRecord.winnerEloBefore ?? null,
+        winnerEloAfter: matchRecord.winnerEloAfter ?? null,
+        loserEloBefore: matchRecord.loserEloBefore ?? null,
+        loserEloAfter: matchRecord.loserEloAfter ?? null,
       };
       return res.json({ status: 'matched', match: matchInfo });
     }
@@ -196,6 +199,8 @@ router.get('/', requireAuth, async (req, res) => {
         ? otherParticipant.user.username
         : null;
 
+      console.log(match.elo);
+
       return {
         matchId: match.id,
         createdAt: match.createdAt,
@@ -204,8 +209,10 @@ router.get('/', requireAuth, async (req, res) => {
         timeTaken: match.timeTaken || null,
         opponent: opponentId,
         opponentName,
-        // (Optionally send puzzle if you want to show a preview; otherwise omit)
-        // puzzle: match.game.puzzle
+        winnerEloBefore: match.winnerEloBefore || null,
+        winnerEloAfter: match.winnerEloAfter || null,
+        loserEloBefore: match.loserEloBefore || null,
+        loserEloAfter: match.loserEloAfter || null,
       };
     });
 
@@ -263,7 +270,11 @@ router.get('/:matchId', requireAuth, async (req, res) => {
         boardState: p.boardState // this is a JSON array or “[]” if never edited
       })),
       winnerId: match.winnerId || null,
-      timeTaken: match.timeTaken || null
+      timeTaken: match.timeTaken || null,
+      winnerEloBefore: match.winnerEloBefore ?? null,
+      winnerEloAfter: match.winnerEloAfter ?? null,
+      loserEloBefore: match.loserEloBefore ?? null,
+      loserEloAfter: match.loserEloAfter ?? null,
     };
 
     return res.json(response);
@@ -328,10 +339,7 @@ router.patch('/:matchId/board', requireAuth, async (req, res) => {
     const boardWithGivens = initialPuzzle.split('').map((ch, i) => {
       return ch !== '0' && ch !== ' ' ? ch : boardString[i];
     }).join('');
-    console.log(boardWithGivens, solutionString);
-    console.log(boardWithGivens === solutionString ? 'Match completed!' : 'Still in progress');
     if (boardWithGivens === solutionString) {
-      console.log(`User ${userId} completed match ${matchId} successfully!`);
       // Only update if no winner yet
       if (!matchRecord.winnerId) {
         // Determine the other participant's userId
@@ -340,17 +348,42 @@ router.patch('/:matchId/board', requireAuth, async (req, res) => {
         const start = matchRecord.createdAt;
         const timeTaken = Math.floor((now.getTime() - start.getTime()) / 1000);
 
+        const winnerId = userId;
+        const loserId = other ? other.userId : null;
+
+        const winnerElo = allParticipants.find(p => p.userId === winnerId)?.user.elo || 1200;
+        const loserElo = other ? allParticipants.find(p => p.userId === loserId)?.user.elo || 1200 : 1200;
+
+        const [winner, loser] = await Promise.all([
+          prisma.user.findUnique({ where: { id: winnerId } }),
+          prisma.user.findUnique({ where: { id: loserId } })
+        ]);
+
+        // Compute new Elo ratings (updateEloRatings returns { newRa, newRb })
+        const { newRa: newWinnerElo, newRb: newLoserElo } = updateEloRatings(winner.elo, loser.elo);
+        console.log(`Updating ELO ratings: ${winner.username} (${winner.elo}) vs ${loser.username} (${loser.elo})`);
+        console.log(`New ratings: ${winner.username} (${newWinnerElo}), ${loser.username} (${newLoserElo})`);
+
         await prisma.match.update({
           where: { id: Number(matchId) },
           data: {
-            winnerId: userId,
-            loserId: other ? other.userId : null,
+            winnerId,
+            loserId,
+            winnerEloBefore: winnerElo,
+            winnerEloAfter: newWinnerElo,
+            loserEloBefore: loserElo,
+            loserEloAfter: newLoserElo,
             timeTaken
           }
         });
         // Refresh matchRecord to reflect new winnerId
         matchRecord.winnerId = userId;
         matchRecord.timeTaken = timeTaken;
+
+        await Promise.all([
+          prisma.user.update({ where: { id: winnerId }, data: { elo: newWinnerElo } }),
+          prisma.user.update({ where: { id: loserId }, data: { elo: newLoserElo } })
+        ]);
       }
     }
 
@@ -440,7 +473,25 @@ router.patch('/:matchId/board', requireAuth, async (req, res) => {
       timeTaken,
     });
   } catch (err) {
-    console.error('[/api/match/:matchId/board] error:', err.message);
+    console.error('[/api/match/:matchId/board] error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+// GET /api/match/:matchId/elo
+// Returns the current Elo for both participants of a match
+router.get('/:matchId/elo', requireAuth, async (req, res) => {
+  const matchId = Number(req.params.matchId);
+  try {
+    const participants = await prisma.matchParticipant.findMany({
+      where: { matchId },
+      include: { user: { select: { id: true, elo: true } } }
+    });
+    const elos = participants.map(p => ({ userId: p.user.id, elo: p.user.elo }));
+    return res.json({ elos });
+  } catch (err) {
+    console.error(`[/api/match/${matchId}/elo] error:`, err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

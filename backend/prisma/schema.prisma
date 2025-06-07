@@ -14,6 +14,8 @@ model User {
   email     String   @unique
   password  String
 
+  elo Int @default(1200)
+
   // All matches this user is a participant in
   participants MatchParticipant[]
 }
@@ -42,6 +44,11 @@ model Match {
   winnerId  Int?
   loserId   Int?
   timeTaken Int? @default(0)
+
+  winnerEloBefore Int?
+  winnerEloAfter  Int?
+  loserEloBefore  Int?
+  loserEloAfter   Int?
 
   participants MatchParticipant[]
 }

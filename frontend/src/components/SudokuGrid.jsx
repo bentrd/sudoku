@@ -27,6 +27,8 @@ const SudokuGrid = ({
     // Which cells are currently selected
     const [selected, setSelected] = useState(() => Array(81).fill(false));
     const isMouseDown = useRef(false);
+    // Index of the currently focused cell for arrow navigation
+    const [focusIndex, setFocusIndex] = useState(0);
 
     // Track Shift/Ctrl for temporary mode override
     const [modifiers, setModifiers] = useState({ shift: false, ctrl: false });
@@ -118,6 +120,7 @@ const SudokuGrid = ({
         setSelected(Array(81).fill(false));
         setLastClearedSignature(null);
         setMode('number');
+        setFocusIndex(0);
     }, []);
 
     // ────────────────────────────────────────────────
@@ -216,6 +219,34 @@ const SudokuGrid = ({
                 return;
             }
 
+            // Arrow‐key navigation: move focus cursor
+            if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) {
+                e.preventDefault();
+                e.stopPropagation();
+                const currIdx = focusIndex;
+                let newIdx = currIdx;
+                const row = Math.floor(currIdx / 9);
+                const col = currIdx % 9;
+                if (e.key === 'ArrowLeft' && col > 0) newIdx = currIdx - 1;
+                else if (e.key === 'ArrowRight' && col < 8) newIdx = currIdx + 1;
+                else if (e.key === 'ArrowUp' && row > 0) newIdx = currIdx - 9;
+                else if (e.key === 'ArrowDown' && row < 8) newIdx = currIdx + 9;
+                const additive = e.shiftKey || e.ctrlKey;
+                setSelected(old => {
+                    if (additive) {
+                        const c = [...old];
+                        c[newIdx] = true;
+                        return c;
+                    } else {
+                        const c = Array(81).fill(false);
+                        c[newIdx] = true;
+                        return c;
+                    }
+                });
+                setFocusIndex(newIdx);
+                return;
+            }
+
             // Allow Ctrl+Z / Cmd+Z and Ctrl+Shift+Z / Cmd+Shift+Z to reach undo/redo
             const keyLower = e.key.toLowerCase();
             if ((e.ctrlKey || e.metaKey) && (keyLower === 'z')) {
@@ -230,7 +261,7 @@ const SudokuGrid = ({
 
         window.addEventListener('keydown', onGlobalKeyDown, true);
         return () => window.removeEventListener('keydown', onGlobalKeyDown, true);
-    }, [mode, selected, board, originalPuzzle, disabled]);
+    }, [mode, selected, board, originalPuzzle, disabled, focusIndex]);
 
     // ────────────────────────────────────────────────
     // 4) MOUSE SELECTION
@@ -255,6 +286,7 @@ const SudokuGrid = ({
         e.preventDefault();
         isMouseDown.current = true;
         addSelect(idx, e.shiftKey || e.ctrlKey);
+        setFocusIndex(idx);
     };
     const handleMouseUp = () => {
         isMouseDown.current = false;
@@ -267,6 +299,7 @@ const SudokuGrid = ({
             c[idx] = true;
             return c;
         });
+        setFocusIndex(idx);
     };
 
     // ────────────────────────────────────────────────

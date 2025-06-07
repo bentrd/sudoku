@@ -5,9 +5,9 @@ import axios from 'axios';
 import useAuth from '../components/authentication/useAuth';
 import SudokuGrid from '../components/SudokuGrid';
 import FindOpponentButton from '../components/match/FindOpponentButton';
-import WinLossModal from '../components/match/WinLossModal';
 import PlayerProgress from '../components/match/PlayerProgress';
 import MatchList from '../components/match/MatchList';
+import WinLossModal from '../components/match/WinLossModal';
 
 const VersusPage = () => {
   const { accessToken, user } = useAuth();
@@ -238,16 +238,29 @@ const VersusPage = () => {
     }
 
     return (
-      <div className="min-h-screen min-w-screen flex flex-col items-center p-4">
-        <h1 className="text-3xl font-bold mb-6">Your Matches</h1>
-        <FindOpponentButton className="mb-4" />
-        <MatchList matchList={matchList} />
+      <div className="min-h-screen min-w-screen flex justify-center items-start bg-gray-50 p-6">
+        <div className="w-full max-w-5xl">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className='flex flex-row items-baseline'><h1 className="text-3xl font-bold mr-4">Match History</h1> ({matchList.length})</div>
+              <FindOpponentButton />
+            </div>
+            <MatchList matchList={matchList} />
+          </div>
+        </div>
       </div>
     );
   }
 
   // 4) We have matchId & matchData; show the versus UI
   // Decide how to label “You” vs opponent
+  const isWinner = winnerId === user.id;
+  const eloBefore = isWinner
+    ? matchData.winnerEloBefore
+    : matchData.loserEloBefore;
+  const eloAfter = isWinner
+    ? matchData.winnerEloAfter
+    : matchData.loserEloAfter;
   const currentUserId = user.id;
   let playerAName = `You (${currentUserId})`;
   let playerBName = `Opponent`;
@@ -267,9 +280,11 @@ const VersusPage = () => {
       {showModal && (
         <WinLossModal
           isWinner={winnerId === user.id}
+          eloBefore={eloBefore}
+          eloAfter={eloAfter}
           time={timeTaken}
           onSendToSolver={() => navigate(`/solver?puzzle=${matchData.gameId}`)}
-          onClose={() => navigate('/')}
+          onClose={() => navigate('/versus')}
         />
       )}
 

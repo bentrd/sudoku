@@ -53,7 +53,6 @@ router.post('/check', async (req, res) => {
         }
 
         const isCorrect = game.solution === solution;
-        console.log(game.solution, solution, isCorrect);
         res.json({ isCorrect });
     } catch (error) {
         console.error(error);
